@@ -49,7 +49,7 @@ VoiceGrab is a **lightweight Windows utility** that converts your voice to text 
 
 ### 1. Download
 ```bash
-git clone https://github.com/consulfedor/VoiceGrab.git
+git clone https://github.com/YourUsername/VoiceGrab.git
 cd VoiceGrab
 ```
 
@@ -83,7 +83,7 @@ Double-click **`VoiceGrab.bat`**
 ### Manual Installation
 ```powershell
 # Clone repository
-git clone https://github.com/consulfedor/VoiceGrab.git
+git clone https://github.com/YourUsername/VoiceGrab.git
 cd VoiceGrab
 
 # Install dependencies
@@ -271,6 +271,6 @@ If VoiceGrab helps you, give it a ⭐ on GitHub!
 
 **Made with ❤️ for the AI era**
 
-[Report Bug](https://github.com/consulfedor/VoiceGrab/issues) • [Request Feature](https://github.com/consulfedor/VoiceGrab/issues)
+[Report Bug](https://github.com/YourUsername/VoiceGrab/issues) • [Request Feature](https://github.com/YourUsername/VoiceGrab/issues)
 
 </div>

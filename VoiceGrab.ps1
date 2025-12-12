@@ -1270,19 +1270,9 @@ function Show-WebView2Window {
                             Start-Process -FilePath $python.cmd -ArgumentList "`"$scriptPath`"" -WorkingDirectory $PSScriptRoot -WindowStyle Hidden
                             
                             # Show success popup
-                            $msg = "VoiceGrab запущен!`n`n"
-                            $msg += "Программа свернута в ТРЕЙ`n"
-                            $msg += "(правый нижний угол экрана)`n`n"
-                            $msg += "Меню: правый клик по иконке`n"
-                            $msg += "Настройки / Выход = там же!`n`n"
-                            $msg += "$hotkeyInstruction"
+                            $msg = "VoiceGrab started!`n`nProgram is in SYSTEM TRAY`n(bottom right corner)`n`nMenu: right-click on icon`nSettings / Exit = there!`n`n$hotkeyInstruction"
                             
-                            [System.Windows.Forms.MessageBox]::Show(
-                                $msg,
-                                "VoiceGrab - Готово!",
-                                [System.Windows.Forms.MessageBoxButtons]::OK,
-                                [System.Windows.Forms.MessageBoxIcon]::Information
-                            ) | Out-Null
+                            [System.Windows.Forms.MessageBox]::Show($msg, "VoiceGrab - Ready!", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information) | Out-Null
                             
                             # Close launcher
                             $form.Close()
