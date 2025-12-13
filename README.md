@@ -34,12 +34,13 @@ VoiceGrab is a **lightweight Windows utility** that converts your voice to text 
 
 ## ✨ Features
 
-- 🎤 **One-Click Recording** — Press `Right Alt` to record
+- 🎤 **One-Click Recording** — Press `Right Ctrl` to record
 - ⚡ **Instant Transcription** — Powered by Groq Whisper (FREE tier!)
 - 📋 **Auto-Paste** — Text goes directly to active window
 - 🔄 **5 Modes** — AI Chat, Code, Docs, Notes, Custom
 - 🛡️ **Profanity Filter** — Optional censorship per mode
 - 🧹 **Filler Cleanup** — Remove "um", "uh", "like" automatically
+- 👻 **Hallucination Filter** — Remove Whisper "ghost" phrases
 - 🖥️ **System Tray** — Runs silently in background
 - ⚙️ **Modern UI** — Beautiful settings panel
 
@@ -65,10 +66,14 @@ Double-click **`VoiceGrab.bat`**
 ### 4. Use
 | Action | How |
 |--------|-----|
-| **Start/Stop Recording** | Press `Right Alt` |
+| **Start/Stop Recording** | Press `Right Ctrl` |
+| **Switch Mode (while recording)** | Click `◀ Mode ▶` on indicator |
 | **Change Mode** | Right-click tray → Mode |
 | **Open Settings** | Right-click tray → Settings |
 | **Exit** | Right-click tray → Exit |
+
+> 💡 **Tip:** Text is always in clipboard! **Ctrl+V** to paste.  
+> **Win+V** opens emoji picker, clipboard history & special symbols.
 
 ---
 
@@ -112,7 +117,7 @@ requirements.txt
 ### Global Settings
 | Setting | Default | Description |
 |---------|---------|-------------|
-| **Hotkey** | Right Alt | Global recording key |
+| **Hotkey** | Right Ctrl | Global recording key |
 | **Max Duration** | 180s | Auto-sends at limit (no need to stop!) |
 | **Save Audio** | OFF | Keep audio files |
 | **Log Texts** | ON | Save all transcriptions to log file |
@@ -127,6 +132,7 @@ Each mode has independent settings:
 | **Temperature** | 0.0 = precise, 1.0 = creative |
 | **Profanity Filter** | Replace bad words with *** |
 | **Filler Cleanup** | Remove "um", "uh", "like", etc. |
+| **Hallucination Filter** | Remove AI "ghost" phrases (customizable list) |
 | **Prompt** | Context hint for Whisper |
 
 ### 5 Modes
@@ -148,7 +154,7 @@ All settings are stored in `config.json`:
 {
   "api": { "key": "gsk_..." },
   "global": {
-    "hotkey": "alt gr",
+    "hotkey": "Right Ctrl",
     "max_duration": 180,
     "save_audio": false,
     "log_texts": true
@@ -185,9 +191,9 @@ Whisper supports 50+ languages including:
 </details>
 
 <details>
-<summary><b>Q: Why Right Alt and not another key?</b></summary>
+<summary><b>Q: Why Right Ctrl and not another key?</b></summary>
 
-Right Alt (AltGr) is ideal because:
+Right Ctrl (AltGr) is ideal because:
 - Rarely used in applications
 - Easy to reach with thumb
 - Works globally in any window

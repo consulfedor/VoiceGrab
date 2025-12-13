@@ -19,15 +19,15 @@ DEFAULT_CONFIG = {
     
     "input": {
         "mode": "toggle",  # toggle or hold
-        "hotkey": "alt gr",
+        "hotkey": "ctrl r",
         "mode_switch": "hotkeys",  # hotkeys, cycle, fixed
-        "cycle_hotkey": "alt gr+tab",  # for cycle mode
+        "cycle_hotkey": "ctrl r+tab",  # for cycle mode
         "mode_hotkeys": {
-            "ai": "alt gr+1",
-            "code": "alt gr+2",
-            "docs": "alt gr+3",
-            "notes": "alt gr+4",
-            "empty": "alt gr+5"
+            "ai": "ctrl r+1",
+            "code": "ctrl r+2",
+            "docs": "ctrl r+3",
+            "notes": "ctrl r+4",
+            "empty": "ctrl r+5"
         }
     },
     

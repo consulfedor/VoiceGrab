@@ -247,9 +247,39 @@ select.lang-select { padding: 6px 10px; background: rgba(13, 17, 23, 0.8); borde
 .tooltip { position: relative; display: inline-block; }
 .tooltip .tooltip-text { visibility: hidden; width: 280px; background: #1a1a2e; color: #fff; font-size: 11px; line-height: 1.4; padding: 10px; border-radius: 6px; border: 1px solid #4a9eff; position: absolute; z-index: 100; top: 125%; left: 0; opacity: 0; transition: opacity 0.3s; }
 .tooltip:hover .tooltip-text { visibility: visible; opacity: 1; }
+/* Success Modal */
+.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(5px); }
+.modal-content { background: linear-gradient(135deg, #1e3a5f 0%, #0d1b2a 100%); border: 1px solid #4a9eff; border-radius: 16px; padding: 30px; max-width: 400px; text-align: center; box-shadow: 0 10px 40px rgba(74,158,255,0.3); animation: modalIn 0.3s ease; }
+@keyframes modalIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.modal-icon { font-size: 48px; margin-bottom: 16px; }
+.modal-title { font-size: 24px; font-weight: 600; color: #4a9eff; margin-bottom: 12px; }
+.modal-text { color: #b8c5d1; font-size: 14px; line-height: 1.6; margin-bottom: 20px; }
+.modal-text .highlight { color: #27ae60; font-weight: 600; }
+.modal-text .hotkey { background: rgba(74,158,255,0.2); padding: 4px 12px; border-radius: 6px; color: #4a9eff; font-weight: 600; display: inline-block; margin-top: 10px; }
+.modal-btn { padding: 12px 40px; background: linear-gradient(135deg, #27ae60 0%, #1e8449 100%); color: #fff; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: transform 0.2s; }
+.modal-btn:hover { transform: scale(1.05); }
 </style>
 </head>
 <body>
+
+<!-- Success Modal -->
+<div class="modal-overlay" id="successModal">
+    <div class="modal-content">
+        <div class="modal-icon">&#x2705;</div>
+        <div class="modal-title">VoiceGrab Ready!</div>
+        <div class="modal-text">
+            Program is in <span class="highlight">System Tray</span><br>
+            (bottom right corner)<br><br>
+            Right-click tray icon for menu<br>
+            <div class="hotkey" id="modalHotkey">Press Right Ctrl to record</div>
+            <div style="margin-top: 12px; font-size: 12px; color: #888;">
+                Text always in clipboard: <b>Ctrl+V</b><br>
+                <b>Win+V</b> = emoji, history, symbols
+            </div>
+        </div>
+        <button class="modal-btn" onclick="closeModalAndExit()">Got it!</button>
+    </div>
+</div>
 
 <h1>VoiceGrab</h1>
 <p class="subtitle">Voice-to-AI Bridge</p>
@@ -272,26 +302,6 @@ select.lang-select { padding: 6px 10px; background: rgba(13, 17, 23, 0.8); borde
             <input type="text" id="apiKey" placeholder="gsk_...">
             <button class="btn btn-small" onclick="saveApiKey()">Save</button>
             <button class="btn btn-small" onclick="getApiKey()">Get Free Key</button>
-        </div>
-        <div class="settings-row">
-            <div>
-                <div class="setting-label">Autostart</div>
-                <div class="setting-desc">Run VoiceGrab when Windows starts</div>
-            </div>
-            <label class="toggle-switch">
-                <input type="checkbox" id="autostart" onchange="toggleAutostart(this.checked)">
-                <span class="toggle-slider"></span>
-            </label>
-        </div>
-        <div class="settings-row" id="startMinimizedRow" style="display: none; padding-left: 20px;">
-            <div>
-                <div class="setting-label">Start Minimized</div>
-                <div class="setting-desc">Start in system tray (background)</div>
-            </div>
-            <label class="toggle-switch">
-                <input type="checkbox" id="startMinimized" onchange="saveSetting('start_minimized', this.checked)">
-                <span class="toggle-slider"></span>
-            </label>
         </div>
         <div class="quick-actions">
             <button class="btn btn-small" onclick="openConfig()">config.json</button>
@@ -341,12 +351,51 @@ select.lang-select { padding: 6px 10px; background: rgba(13, 17, 23, 0.8); borde
                     Global Hotkey
                     <span class="tooltip">
                         <span class="help-btn">?</span>
-                        <span class="tooltip-text"><b>Global Hotkey:</b><br>One hotkey for ALL modes!<br>Click and press key combo.<br>Default: Right Alt (AltGr)<br>Mode affects prompt, not hotkey.</span>
+                        <span class="tooltip-text"><b>Global Hotkey:</b><br>One hotkey for ALL modes!<br>Select from dropdown.<br>Default: Right Ctrl<br>Requires restart after change.</span>
                     </span>
                 </div>
-                <div class="setting-desc">Single hotkey for all modes (click to change)</div>
+                <div class="setting-desc">Recording trigger key (requires restart)</div>
             </div>
-            <input type="text" class="hotkey-input" id="globalHotkey" value="alt gr" readonly onclick="startHotkeyCapture(this)" onkeydown="captureGlobalHotkey(event, this)" onblur="cancelHotkeyCapture(this)" style="min-width: 120px;">
+            <select id="globalHotkey" class="lang-select" onchange="saveHotkey(this.value)" style="min-width: 140px;">
+                <option value="ctrl r">Right Ctrl</option>
+                <option value="alt gr">Right Alt</option>
+                <option value="shift r">Right Shift</option>
+                <option value="ctrl">Left Ctrl</option>
+                <option value="alt">Left Alt</option>
+                <option value="shift">Left Shift</option>
+            </select>
+        </div>
+        
+        <div class="settings-row">
+            <div>
+                <div class="setting-label">Paste Hotkey</div>
+                <div class="setting-desc">Text always goes to clipboard!</div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 14px; color: #4a9eff; font-weight: 600;">Ctrl+V</div>
+                <div style="font-size: 11px; color: #888;">Win+V - opens emoji, history, symbols</div>
+            </div>
+        </div>
+        
+        <div class="settings-row">
+            <div>
+                <div class="setting-label">
+                    Input Mode
+                    <span class="tooltip">
+                        <span class="help-btn">?</span>
+                        <span class="tooltip-text"><b>Input Mode:</b><br>- <b>Toggle:</b> Click once to start, click again to stop<br>- <b>Hold:</b> Hold key to record, release to stop<br>Hold is faster for quick phrases, Toggle for long texts</span>
+                    </span>
+                </div>
+                <div class="setting-desc">How hotkey triggers recording</div>
+            </div>
+            <div style="display: flex;">
+                <label style="display: flex; align-items: center; margin-right: 24px; cursor: pointer; color: #fff; font-size: 12px;">
+                    <input type="radio" name="globalInputMode" value="toggle" id="modeToggle" checked onchange="saveInputMode('toggle')" style="margin-right: 6px;"> Toggle
+                </label>
+                <label style="display: flex; align-items: center; cursor: pointer; color: #fff; font-size: 12px;">
+                    <input type="radio" name="globalInputMode" value="hold" id="modeHold" onchange="saveInputMode('hold')" style="margin-right: 6px;"> Hold
+                </label>
+            </div>
         </div>
         
         <div class="settings-divider"></div>
@@ -393,6 +442,30 @@ select.lang-select { padding: 6px 10px; background: rgba(13, 17, 23, 0.8); borde
             </label>
         </div>
         
+        <div class="settings-divider"></div>
+        <div class="settings-subtitle">Startup</div>
+        
+        <div class="settings-row">
+            <div>
+                <div class="setting-label">Autostart</div>
+                <div class="setting-desc">Run VoiceGrab when Windows starts</div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="autostart" onchange="toggleAutostart(this.checked)">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        <div class="settings-row" id="startMinimizedRow" style="display: none; padding-left: 20px;">
+            <div>
+                <div class="setting-label">Start Minimized</div>
+                <div class="setting-desc">Start in system tray (background)</div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="startMinimized" onchange="saveSetting('start_minimized', this.checked)">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        
         <div style="display: flex; justify-content: center; gap: 12px; margin-top: 12px;">
             <button class="btn btn-small" onclick="openRecordings()">Recordings Folder</button>
             <button class="btn btn-small" onclick="saveGlobalSettings()" style="background: #27ae60;">Save Settings</button>
@@ -430,26 +503,6 @@ select.lang-select { padding: 6px 10px; background: rgba(13, 17, 23, 0.8); borde
             
             <!-- Hotkey is now GLOBAL in Settings section, not per-mode -->
             
-            <div class="settings-row">
-                <div>
-                    <div class="setting-label">
-                        Input Mode
-                        <span class="tooltip">
-                            <span class="help-btn">?</span>
-                            <span class="tooltip-text"><b>Input Mode:</b><br>- <b>Toggle:</b> Click once to start, click again to stop<br>- <b>Hold:</b> Hold key to record, release to stop<br>Hold is better for quick phrases, Toggle for long texts</span>
-                        </span>
-                    </div>
-                    <div class="setting-desc">Toggle or hold to record</div>
-                </div>
-                <div style="display: flex;">
-                    <label style="display: flex; align-items: center; margin-right: 40px; cursor: pointer; color: #fff; font-size: 12px;">
-                        <input type="radio" name="modeInputMode" value="toggle" id="modeInputToggle" checked onchange="saveModeField('input_mode', 'toggle')" style="margin-right: 6px;"> Toggle
-                    </label>
-                    <label style="display: flex; align-items: center; cursor: pointer; color: #fff; font-size: 12px;">
-                        <input type="radio" name="modeInputMode" value="hold" id="modeInputHold" onchange="saveModeField('input_mode', 'hold')" style="margin-right: 6px;"> Hold
-                    </label>
-                </div>
-            </div>
             
             <div class="settings-row" style="flex-direction: column; align-items: flex-start;">
                 <div style="width: 100%; display: flex; justify-content: space-between; align-items: center;">
@@ -573,6 +626,28 @@ select.lang-select { padding: 6px 10px; background: rgba(13, 17, 23, 0.8); borde
                 <textarea class="prompt-input" id="modeFillerWords" rows="2" onchange="saveModeField('filler_words', this.value)">um, uh, like, you know</textarea>
             </div>
             
+            <div class="settings-row">
+                <div>
+                    <div class="setting-label">
+                        Hallucination Filter
+                        <span class="tooltip">
+                            <span class="help-btn">?</span>
+                            <span class="tooltip-text"><b>Hallucination Filter:</b><br>Removes Whisper "ghost" phrases that appear on audio cut.<br>Add your own phrases to remove!</span>
+                        </span>
+                    </div>
+                    <div class="setting-desc">Remove AI ghost phrases</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="modeHallucinationFilter" checked onchange="saveModeField('hallucination_filter', this.checked)">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            
+            <div style="margin-bottom: 12px;" id="garbagePhrasesContainer">
+                <div class="setting-desc" style="margin-bottom: 8px;">Phrases to remove (comma separated):</div>
+                <textarea class="prompt-input" id="modeGarbagePhrases" rows="4" onchange="saveModeField('garbage_phrases', this.value)">&#1055;&#1088;&#1086;&#1076;&#1086;&#1083;&#1078;&#1077;&#1085;&#1080;&#1077; &#1089;&#1083;&#1077;&#1076;&#1091;&#1077;&#1090;, To be continued, Thank you for watching, &#1057;&#1087;&#1072;&#1089;&#1080;&#1073;&#1086; &#1079;&#1072; &#1087;&#1088;&#1086;&#1089;&#1084;&#1086;&#1090;&#1088;, &#1055;&#1086;&#1076;&#1087;&#1080;&#1089;&#1099;&#1074;&#1072;&#1081;&#1090;&#1077;&#1089;&#1100; &#1085;&#1072; &#1082;&#1072;&#1085;&#1072;&#1083;, Subscribe, Subtitles by, [Music], [&#1052;&#1091;&#1079;&#1099;&#1082;&#1072;], (music), (&#1084;&#1091;&#1079;&#1099;&#1082;&#1072;), &#1056;&#1077;&#1076;&#1072;&#1082;&#1090;&#1086;&#1088; &#1089;&#1091;&#1073;&#1090;&#1080;&#1090;&#1088;&#1086;&#1074;, &#1050;&#1086;&#1088;&#1088;&#1077;&#1082;&#1090;&#1086;&#1088;</textarea>
+            </div>
+            
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
                 <button class="btn btn-small" onclick="saveModeSettings()" style="background: #27ae60;">Save Settings</button>
                 <button class="btn-reset" onclick="resetMode()">Reset to Default</button>
@@ -585,6 +660,17 @@ select.lang-select { padding: 6px 10px; background: rgba(13, 17, 23, 0.8); borde
 <div class="log-area" id="logArea">Ready to check dependencies...</div>
 
 <script>
+// Modal functions
+function showSuccessModal(hotkeyText) {
+    var modal = document.getElementById('successModal');
+    var hotkeyEl = document.getElementById('modalHotkey');
+    if (hotkeyEl && hotkeyText) hotkeyEl.innerText = hotkeyText;
+    modal.style.display = 'flex';
+}
+function closeModalAndExit() {
+    doAction('closeWindow');
+}
+
 // Toggle functions
 function toggleDeps() {
     var content = document.getElementById('depsContent');
@@ -742,7 +828,13 @@ function selectMode(mode) {
             try {
                 var data = JSON.parse(dataEl.value);
                 document.getElementById('modeProfanity').checked = data.profanity_filter === true;
-                document.getElementById('modeFillerCleanup').checked = data.filler_cleanup === true;
+                document.getElementById('modeFillerCleanup').checked = data.filler_cleanup === true || data.filler_cleanup === 'true';
+                // Hallucination filter (default true if missing)
+                var hallucEl = document.getElementById('modeHallucinationFilter');
+                if (hallucEl) {
+                    // Handle both boolean and string values
+                    hallucEl.checked = data.hallucination_filter !== false && data.hallucination_filter !== 'false';
+                }
                 // Update mode name for customizable modes
                 var nameEl = document.getElementById('modeName');
                 if (nameEl && data.name) {
@@ -771,6 +863,18 @@ function saveModeField(field, value) {
     }
     doAction('saveMode:' + currentMode + ':' + field + ':' + encoded);
     showSaved();
+}
+
+function saveHotkey(value) {
+    doAction('saveHotkey:' + value);
+    showSaved();
+    log('Hotkey saved: ' + value + ' (restart required)');
+}
+
+function saveInputMode(mode) {
+    doAction('inputMode:' + mode);
+    showSaved();
+    log('Input mode: ' + mode);
 }
 
 var previousHotkey = '';
@@ -1115,10 +1219,6 @@ function Show-WebView2Window {
                 $logEl = $doc.GetElementById("logArea")
             
                 switch -Wildcard ($action) {
-                    "run" {
-                        if ($logEl) { $logEl.InnerHtml += "Starting VoiceGrab...<br>" }
-                        Start-Process "cmd" -ArgumentList "/c cd /d `"$script:ScriptDir`" && python voicegrab.py" -WindowStyle Normal
-                    }
                     "saveKey:*" {
                         $key = $action.Substring(8)
                         if ($key.Length -gt 5) {
@@ -1198,6 +1298,16 @@ function Show-WebView2Window {
                         Save-Config $config
                         if ($logEl) { $logEl.InnerHtml += "Max duration: ${duration}s<br>" }
                     }
+                    "saveHotkey:*" {
+                        $hotkey = $action.Substring(11)
+                        $config = Get-Config
+                        if (-not $config.input) { 
+                            $config | Add-Member -NotePropertyName "input" -NotePropertyValue @{} -Force 
+                        }
+                        $config.input.hotkey = $hotkey
+                        Save-Config $config
+                        if ($logEl) { $logEl.InnerHtml += "Hotkey: $hotkey (restart to apply)<br>" }
+                    }
                     "setting:*" {
                         $parts = $action.Substring(8).Split(":")
                         $key = $parts[0]
@@ -1264,22 +1374,25 @@ function Show-WebView2Window {
                             # Get current mode settings for message
                             $inputMode = $config.modes.ai.input_mode
                             if (-not $inputMode) { $inputMode = "toggle" }
-                            $hotkeyInstruction = if ($inputMode -eq "hold") { "HOLD Right Alt to record" } else { "Press Right Alt to start/stop" }
+                            $hotkeyInstruction = if ($inputMode -eq "hold") { "HOLD Right Ctrl to record" } else { "Press Right Ctrl to start/stop" }
                             
                             # pynput works without admin - run hidden
                             Start-Process -FilePath $python.cmd -ArgumentList "`"$scriptPath`"" -WorkingDirectory $PSScriptRoot -WindowStyle Hidden
                             
-                            # Show success popup
-                            $msg = "VoiceGrab started!`n`nProgram is in SYSTEM TRAY`n(bottom right corner)`n`nMenu: right-click on icon`nSettings / Exit = there!`n`n$hotkeyInstruction"
-                            
-                            [System.Windows.Forms.MessageBox]::Show($msg, "VoiceGrab - Ready!", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information) | Out-Null
-                            
-                            # Close launcher
-                            $form.Close()
+                            # Show beautiful modal popup
+                            $modalEl = $doc.GetElementById("successModal")
+                            $hotkeyEl = $doc.GetElementById("modalHotkey")
+                            if ($modalEl) { 
+                                $modalEl.Style = "display: flex;"
+                                if ($hotkeyEl) { $hotkeyEl.InnerText = $hotkeyInstruction }
+                            }
                         }
                         else {
                             if ($logEl) { $logEl.InnerHtml += "<span class='err'>ERROR: voicegrab.py not found!</span><br>" }
                         }
+                    }
+                    "closeWindow" {
+                        $form.Close()
                     }
                     "limits" {
                         Start-Process "https://console.groq.com/settings/limits"
@@ -1406,8 +1519,9 @@ function Show-WebView2Window {
                             if ($modeDataJsonEl) {
                                 $profanityVal = if ($modeData.profanity_filter -eq $true) { "true" } else { "false" }
                                 $fillerVal = if ($modeData.filler_cleanup -eq $true) { "true" } else { "false" }
+                                $hallucVal = if ($modeData.hallucination_filter -eq $false) { "false" } else { "true" }
                                 $nameVal = if ($modeData.name) { $modeData.name } else { $modeName }
-                                $jsonData = "{`"profanity_filter`":$profanityVal,`"filler_cleanup`":$fillerVal,`"name`":`"$nameVal`"}"
+                                $jsonData = "{`"profanity_filter`":$profanityVal,`"filler_cleanup`":$fillerVal,`"hallucination_filter`":$hallucVal,`"name`":`"$nameVal`"}"
                                 $modeDataJsonEl.SetAttribute("value", $jsonData)
                             }
                             # Input Mode radio buttons
@@ -1437,18 +1551,20 @@ function Show-WebView2Window {
                             $config.modes | Add-Member -NotePropertyName $modeName -NotePropertyValue $defaults.modes.$modeName -Force
                         }
                         
-                        # Handle different field types
-                        if ($field -eq "filler_words") {
-                            $config.modes.$modeName.$field = $value.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+                        # Handle different field types - use Add-Member to support new properties
+                        if ($field -eq "filler_words" -or $field -eq "garbage_phrases") {
+                            $arrValue = $value.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+                            $config.modes.$modeName | Add-Member -NotePropertyName $field -NotePropertyValue $arrValue -Force
                         }
                         elseif ($field -eq "temperature") {
-                            $config.modes.$modeName.$field = [double]$value
+                            $config.modes.$modeName | Add-Member -NotePropertyName $field -NotePropertyValue ([double]$value) -Force
                         }
-                        elseif ($field -eq "profanity_filter") {
-                            $config.modes.$modeName.$field = $value -eq "true"
+                        elseif ($field -eq "profanity_filter" -or $field -eq "filler_cleanup" -or $field -eq "hallucination_filter") {
+                            $boolValue = $value -eq "true"
+                            $config.modes.$modeName | Add-Member -NotePropertyName $field -NotePropertyValue $boolValue -Force
                         }
                         else {
-                            $config.modes.$modeName.$field = $value
+                            $config.modes.$modeName | Add-Member -NotePropertyName $field -NotePropertyValue $value -Force
                         }
                         
                         Save-Config $config
@@ -1606,6 +1722,12 @@ function Show-WebView2Window {
                 else {
                     $toggleRadio = $doc.GetElementById("modeToggle")
                     if ($toggleRadio) { $toggleRadio.SetAttribute("checked", "checked") }
+                }
+                
+                # Load hotkey setting into dropdown
+                if ($config.input -and $config.input.hotkey) {
+                    $hotkeySelect = $doc.GetElementById("globalHotkey")
+                    if ($hotkeySelect) { $hotkeySelect.SetAttribute("value", $config.input.hotkey) }
                 }
                 
                 # Load global settings

@@ -12,10 +12,12 @@ import time
 class FloatingIndicator:
     """Thread-safe floating indicator for recording status"""
     
-    def __init__(self, max_duration=180):
+    def __init__(self, max_duration=180, on_mode_click=None):
         self.max_duration = max_duration
+        self.on_mode_click = on_mode_click  # Callback for mode switching
         self.root = None
         self.canvas = None
+        self.dot_label = None
         self.label = None
         self.time_label = None
         self.mode_label = None
@@ -60,9 +62,21 @@ class FloatingIndicator:
         status_frame = tk.Frame(frame, bg='#1a1a2e')
         status_frame.pack(fill='x')
         
+        # Separate blinking dot from static text - FIXED WIDTH to prevent shifting
+        self.dot_label = tk.Label(
+            status_frame,
+            text="🎤",
+            font=('Segoe UI', 12, 'bold'),
+            fg='#ffffff',
+            bg='#1a1a2e',
+            width=2,  # Fixed width in characters
+            anchor='center'
+        )
+        self.dot_label.pack(side='left')
+        
         self.label = tk.Label(
             status_frame,
-            text="🎤 Ready",
+            text=" Ready",
             font=('Segoe UI', 12, 'bold'),
             fg='#ffffff',
             bg='#1a1a2e'
@@ -78,15 +92,17 @@ class FloatingIndicator:
         )
         self.time_label.pack(side='right')
         
-        # Mode label
+        # Mode label - clickable to switch modes
         self.mode_label = tk.Label(
             frame,
             text="",
             font=('Segoe UI', 9),
             fg='#58a6ff',
-            bg='#1a1a2e'
+            bg='#1a1a2e',
+            cursor='hand2'  # Hand cursor to show it's clickable
         )
         self.mode_label.pack(anchor='w')
+        self.mode_label.bind('<Button-1>', self._on_mode_click)
         
         # Progress bar canvas - thicker for visibility
         self.canvas = tk.Canvas(
@@ -97,8 +113,8 @@ class FloatingIndicator:
         )
         self.canvas.pack(fill='x', pady=(6, 0))
         
-        # Draggable
-        for w in [frame, self.label, self.time_label, self.mode_label]:
+        # Draggable (except mode_label which is for clicking)
+        for w in [frame, self.dot_label, self.label, self.time_label]:
             w.bind('<Button-1>', self._start_drag)
             w.bind('<B1-Motion>', self._drag)
         
@@ -127,6 +143,8 @@ class FloatingIndicator:
                     self._do_show_result(*args)
                 elif cmd == 'show_error':
                     self._do_show_error(*args)
+                elif cmd == 'update_mode':
+                    self._do_update_mode(*args)
                 elif cmd == 'update':
                     self._do_update()
         except queue.Empty:
@@ -148,6 +166,11 @@ class FloatingIndicator:
         x = self.root.winfo_x() + event.x - self._drag_x
         y = self.root.winfo_y() + event.y - self._drag_y
         self.root.geometry(f"+{x}+{y}")
+    
+    def _on_mode_click(self, event):
+        """Handle click on mode label to switch to next mode"""
+        if self.on_mode_click:
+            self.on_mode_click()
     
     # === Thread-safe public methods (can be called from any thread) ===
     
@@ -172,6 +195,11 @@ class FloatingIndicator:
     def show_error(self, message):
         self._cmd_queue.put(('show_error', (message,)))
     
+    def update_mode(self, mode_name):
+        """Update mode display (thread-safe)"""
+        self.mode_name = mode_name
+        self._cmd_queue.put(('update_mode', (mode_name,)))
+    
     # === Internal methods (run on main thread) ===
     
     def _do_show(self, mode_name):
@@ -192,6 +220,11 @@ class FloatingIndicator:
     
     def _do_stop_recording(self):
         self.recording = False
+    
+    def _do_update_mode(self, mode_name):
+        """Update mode display"""
+        self.mode_name = mode_name
+        self.mode_label.config(text=f"◀ {mode_name} ▶")
     
     def _do_show_processing(self):
         self.label.config(text="⏳ Processing...", fg='#f39c12')
@@ -233,16 +266,18 @@ class FloatingIndicator:
             else:
                 color = '#ff4444'  # Red
             
-            # Pulse effect
+            # Pulse effect - ONLY the dot blinks, text stays static
             pulse = "🔴" if int(elapsed * 2) % 2 == 0 else "⭕"
             
-            self.label.config(text=f"{pulse} Recording", fg=color)
+            self.dot_label.config(text=pulse, fg=color)
+            self.label.config(text=" Recording", fg=color)
             remaining = max(0, self.max_duration - int(elapsed))
             self.time_label.config(text=f"{mins}:{secs:02d} • {remaining}s left")
-            self.mode_label.config(text=self.mode_name)
+            self.mode_label.config(text=f"◀ {self.mode_name} ▶")
             self._draw_progress(progress, color)
         else:
-            self.label.config(text="🎤 Ready", fg='#ffffff')
+            self.dot_label.config(text="🎤", fg='#ffffff')
+            self.label.config(text=" Ready", fg='#ffffff')
             self.time_label.config(text="")
             self._draw_progress(0, '#ffffff')
     

@@ -90,19 +90,45 @@ DEFAULT_MODE = 'ai'
 current_mode = DEFAULT_MODE
 
 def normalize_hotkey(hotkey):
-    """Convert config hotkey to keyboard library format"""
+    """Convert config hotkey to pynput key identifier"""
     if not hotkey:
-        return 'right alt'
-    # Map common variations
+        return 'ctrl_r'
+    # Map common variations to pynput key names
     h = hotkey.lower().strip()
-    if h in ('alt gr', 'altgr', 'alt_gr'):
-        return 'right alt'
-    if h.startswith('alt+'):
-        return h.replace('alt+', 'alt+')
+    # Right Ctrl variations
+    if h in ('ctrl r', 'right ctrl', 'ctrl_r', 'rctrl'):
+        return 'ctrl_r'
+    # Right Alt variations
+    if h in ('alt gr', 'altgr', 'alt_gr', 'right alt', 'alt r', 'alt_r', 'ralt'):
+        return 'alt_gr'
+    # Left modifiers
+    if h in ('ctrl', 'left ctrl', 'ctrl_l'):
+        return 'ctrl_l'
+    if h in ('alt', 'left alt', 'alt_l'):
+        return 'alt_l'
+    if h in ('shift', 'left shift', 'shift_l'):
+        return 'shift_l'
+    # Right shift
+    if h in ('right shift', 'shift_r', 'rshift'):
+        return 'shift_r'
     return h
 
-# Single global hotkey for all modes (switching via tray menu)
-HOTKEY = normalize_hotkey(cfg.get('input', {}).get('hotkey', 'alt gr'))
+def get_pynput_key(hotkey_name):
+    """Get pynput Key object from normalized name"""
+    key_map = {
+        'ctrl_r': pynput_keyboard.Key.ctrl_r,
+        'ctrl_l': pynput_keyboard.Key.ctrl_l,
+        'alt_gr': pynput_keyboard.Key.alt_gr,
+        'alt_r': pynput_keyboard.Key.alt_r,
+        'alt_l': pynput_keyboard.Key.alt_l,
+        'shift_r': pynput_keyboard.Key.shift_r,
+        'shift_l': pynput_keyboard.Key.shift_l,
+    }
+    return key_map.get(hotkey_name, pynput_keyboard.Key.ctrl_r)
+
+# Single global hotkey for all modes - configurable!
+HOTKEY_NAME = normalize_hotkey(cfg.get('global', {}).get('hotkey', cfg.get('input', {}).get('hotkey', 'ctrl r')))
+HOTKEY_KEY = get_pynput_key(HOTKEY_NAME)
 
 # UI settings
 USE_INDICATOR = cfg.get('ui', {}).get('floating_indicator', True)
@@ -126,8 +152,9 @@ MODE_KEYS = {
 def get_mode_name(mode_key):
     """Get display name for mode"""
     if mode_key in MODES:
-        return MODES[mode_key].get('name', mode_key)
-    return mode_key
+        name = MODES[mode_key].get('name', '')
+        return name if name else mode_key.capitalize()
+    return mode_key.capitalize()
 
 
 def get_prompt(mode_key):
@@ -145,23 +172,47 @@ def should_cleanup(mode_key):
 
 
 def cleanup_text(text, mode_key):
-    """Remove filler words using MODE-SPECIFIC list"""
+    """Remove filler words and garbage phrases (Whisper hallucinations)"""
     mode_data = MODES.get(mode_key, {})
+    
+    # Check if hallucination filter is enabled (default True)
+    hallucination_filter = mode_data.get('hallucination_filter', True)
+    
+    # Remove garbage phrases only if enabled
+    if hallucination_filter:
+        # Get garbage phrases from config, with defaults
+        default_garbage = [
+            "Продолжение следует", "продолжение следует",
+            "Продолжение следует...", "продолжение следует...",
+            "To be continued", "to be continued",
+            "Thank you for watching", "Спасибо за просмотр",
+            "Подписывайтесь на канал", "Subscribe", "Subtitles by",
+            "[Music]", "[Музыка]", "(music)", "(музыка)",
+            "Редактор субтитров", "Корректор",
+        ]
+        
+        garbage_phrases = mode_data.get('garbage_phrases', default_garbage)
+        
+        # Handle comma-separated string from UI
+        if isinstance(garbage_phrases, str):
+            garbage_phrases = [p.strip() for p in garbage_phrases.split(',') if p.strip()]
+        
+        for phrase in garbage_phrases:
+            # Case-insensitive replacement
+            text = re.sub(re.escape(phrase), '', text, flags=re.IGNORECASE)
     
     # Get filler_words from CURRENT mode
     filler_words = mode_data.get('filler_words', [])
-    if not filler_words:
-        return text
-    
-    # Handle both list and comma-separated string
-    if isinstance(filler_words, str):
-        filler_words = [w.strip() for w in filler_words.split(',') if w.strip()]
-    
-    # Remove filler words (as separate words)
-    for word in filler_words:
-        # Word boundaries for Russian and English
-        pattern = r'(?<![а-яА-Яa-zA-Z])' + re.escape(word) + r'(?![а-яА-Яa-zA-Z])'
-        text = re.sub(pattern, '', text, flags=re.IGNORECASE)
+    if filler_words:
+        # Handle both list and comma-separated string
+        if isinstance(filler_words, str):
+            filler_words = [w.strip() for w in filler_words.split(',') if w.strip()]
+        
+        # Remove filler words (as separate words)
+        for word in filler_words:
+            # Word boundaries for Russian and English
+            pattern = r'(?<![а-яА-Яa-zA-Z])' + re.escape(word) + r'(?![а-яА-Яa-zA-Z])'
+            text = re.sub(pattern, '', text, flags=re.IGNORECASE)
     
     # Clean up extra spaces
     text = re.sub(r'\s+', ' ', text)
@@ -357,8 +408,19 @@ def do_stop_and_process():
     text = transcribe(tmp_path)
     elapsed = time.time() - start
     
-    # Check save_audio setting from config
-    save_audio = cfg.get('global', {}).get('save_audio', False)
+    # ALWAYS run cleanup to remove garbage phrases (Whisper hallucinations)
+    # and filler words (if enabled for this mode)
+    if text:
+        text = cleanup_text(text, current_mode)
+    
+    # Check save_audio setting from config (reload to get current value)
+    import json
+    try:
+        with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+            current_cfg = json.load(f)
+        save_audio = current_cfg.get('global', {}).get('save_audio', False)
+    except:
+        save_audio = False
     if save_audio:
         # Copy to recordings folder with timestamp
         import shutil
@@ -424,11 +486,8 @@ def on_press(key):
     except:
         key_name = str(key)
     
-    # Check for Right Alt / AltGr
-    is_hotkey = (key == pynput_keyboard.Key.alt_gr or 
-                 key == pynput_keyboard.Key.alt_r or
-                 'alt_gr' in key_name.lower() or
-                 'alt_r' in key_name.lower())
+    # Check for configured hotkey (default: Right Ctrl)
+    is_hotkey = (key == HOTKEY_KEY or HOTKEY_NAME in key_name.lower())
     
     if is_hotkey:
         # Toggle mode
@@ -445,9 +504,8 @@ def on_release(key):
     """Handle key release events (pynput)"""
     global recording
     
-    # Check for Right Alt / AltGr
-    is_hotkey = (key == pynput_keyboard.Key.alt_gr or 
-                 key == pynput_keyboard.Key.alt_r)
+    # Check for configured hotkey
+    is_hotkey = (key == HOTKEY_KEY)
     
     # Hold mode - stop on release
     if is_hotkey and INPUT_MODE == 'hold' and recording:
@@ -472,8 +530,9 @@ def main():
     print(f"Max: {MAX_DURATION}s")
     print()
     print("📌 Controls:")
-    print(f"   {HOTKEY.replace('alt gr', 'Right Alt')} = Start/Stop")
-    print("   Right Alt + 1-5 = Switch mode")
+    hotkey_display = HOTKEY_NAME.replace('ctrl_r', 'Right Ctrl').replace('alt_gr', 'Right Alt')
+    print(f"   {hotkey_display} = Start/Stop")
+    print("   Right Ctrl + 1-5 = Switch mode")
     print("   ESC = Exit")
     print("   Right-click tray icon = Settings")
     print("=" * 50)
@@ -549,7 +608,24 @@ def main():
     if USE_INDICATOR:
         try:
             from floating_indicator import FloatingIndicator
-            indicator = FloatingIndicator()
+            
+            # Mode order for cycling
+            MODE_ORDER = ['ai', 'code', 'docs', 'notes', 'chat']
+            
+            def next_mode():
+                """Switch to next mode (click on indicator)"""
+                global current_mode
+                idx = MODE_ORDER.index(current_mode) if current_mode in MODE_ORDER else 0
+                next_idx = (idx + 1) % len(MODE_ORDER)
+                new_mode = MODE_ORDER[next_idx]
+                current_mode = new_mode
+                print(f"\n🔄 Mode: {get_mode_name(new_mode)}")
+                if indicator:
+                    indicator.update_mode(get_mode_name(new_mode))
+                if tray:
+                    tray.set_mode(new_mode)
+            
+            indicator = FloatingIndicator(on_mode_click=next_mode)
             indicator.run_in_thread()
         except Exception as e:
             print(f"⚠️ Indicator disabled: {e}")
