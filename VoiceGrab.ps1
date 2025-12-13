@@ -504,39 +504,77 @@ select.lang-select { padding: 6px 10px; background: rgba(13, 17, 23, 0.8); borde
             <!-- Hotkey is now GLOBAL in Settings section, not per-mode -->
             
             
-            <div class="settings-row" style="flex-direction: column; align-items: flex-start;">
-                <div style="width: 100%; display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <div class="setting-label">
-                            Language
-                            <span class="tooltip">
-                                <span class="help-btn">?</span>
-                                <span class="tooltip-text"><b>Primary Language:</b><br>Whisper uses ONE language at a time!<br>- Select your main spoken language<br>- Auto = Whisper detects language<br>- English terms are recognized in any mode</span>
-                            </span>
-                        </div>
-                        <div class="setting-desc">Select PRIMARY language (Whisper uses one)</div>
+            <div class="settings-row">
+                <div>
+                    <div class="setting-label">
+                        Language
+                        <span class="tooltip">
+                            <span class="help-btn">?</span>
+                            <span class="tooltip-text"><b>Primary Language:</b><br>Whisper uses ONE language at a time!<br>- Select your main spoken language<br>- Auto = Whisper detects language<br>- English terms are recognized in any mode</span>
+                        </span>
                     </div>
+                    <div class="setting-desc">Select PRIMARY language (Whisper uses one)</div>
                 </div>
-                <div style="display: flex; flex-wrap: wrap; margin-top: 8px;" id="langRadios">
-                    <label style="display: flex; align-items: center; margin-right: 24px; cursor: pointer; color: #fff; font-size: 12px;">
-                        <input type="radio" name="modeLang" value="auto" id="langAuto" onchange="saveLang(this.value)" style="margin-right: 4px;"> Auto
-                    </label>
-                    <label style="display: flex; align-items: center; margin-right: 24px; cursor: pointer; color: #fff; font-size: 12px;">
-                        <input type="radio" name="modeLang" value="ru" id="langRu" checked onchange="saveLang(this.value)" style="margin-right: 4px;"> Russian
-                    </label>
-                    <label style="display: flex; align-items: center; margin-right: 24px; cursor: pointer; color: #fff; font-size: 12px;">
-                        <input type="radio" name="modeLang" value="en" id="langEn" onchange="saveLang(this.value)" style="margin-right: 4px;"> English
-                    </label>
-                    <label style="display: flex; align-items: center; margin-right: 24px; cursor: pointer; color: #fff; font-size: 12px;">
-                        <input type="radio" name="modeLang" value="tr" id="langTr" onchange="saveLang(this.value)" style="margin-right: 4px;"> Turkish
-                    </label>
-                    <label style="display: flex; align-items: center; margin-right: 24px; cursor: pointer; color: #fff; font-size: 12px;">
-                        <input type="radio" name="modeLang" value="uk" id="langUk" onchange="saveLang(this.value)" style="margin-right: 4px;"> Ukrainian
-                    </label>
-                    <label style="display: flex; align-items: center; cursor: pointer; color: #fff; font-size: 12px;">
-                        <input type="radio" name="modeLang" value="pl" id="langPl" onchange="saveLang(this.value)" style="margin-right: 4px;"> Polish
-                    </label>
-                </div>
+                <select id="modeLang" class="lang-select" onchange="saveLang(this.value)" style="min-width: 150px;">
+                    <option value="en" selected>English</option>
+                    <option value="auto">Auto-detect</option>
+                    <option value="af">Afrikaans</option>
+                    <option value="ar">Arabic</option>
+                    <option value="hy">Armenian</option>
+                    <option value="az">Azerbaijani</option>
+                    <option value="be">Belarusian</option>
+                    <option value="bs">Bosnian</option>
+                    <option value="bg">Bulgarian</option>
+                    <option value="ca">Catalan</option>
+                    <option value="zh">Chinese</option>
+                    <option value="hr">Croatian</option>
+                    <option value="cs">Czech</option>
+                    <option value="da">Danish</option>
+                    <option value="nl">Dutch</option>
+                    <option value="et">Estonian</option>
+                    <option value="fi">Finnish</option>
+                    <option value="fr">French</option>
+                    <option value="gl">Galician</option>
+                    <option value="de">German</option>
+                    <option value="el">Greek</option>
+                    <option value="he">Hebrew</option>
+                    <option value="hi">Hindi</option>
+                    <option value="hu">Hungarian</option>
+                    <option value="is">Icelandic</option>
+                    <option value="id">Indonesian</option>
+                    <option value="it">Italian</option>
+                    <option value="ja">Japanese</option>
+                    <option value="kn">Kannada</option>
+                    <option value="kk">Kazakh</option>
+                    <option value="ko">Korean</option>
+                    <option value="lv">Latvian</option>
+                    <option value="lt">Lithuanian</option>
+                    <option value="mk">Macedonian</option>
+                    <option value="ms">Malay</option>
+                    <option value="mr">Marathi</option>
+                    <option value="mi">Maori</option>
+                    <option value="ne">Nepali</option>
+                    <option value="no">Norwegian</option>
+                    <option value="fa">Persian</option>
+                    <option value="pl">Polish</option>
+                    <option value="pt">Portuguese</option>
+                    <option value="ro">Romanian</option>
+                    <option value="ru">Russian</option>
+                    <option value="sr">Serbian</option>
+                    <option value="sk">Slovak</option>
+                    <option value="sl">Slovenian</option>
+                    <option value="es">Spanish</option>
+                    <option value="sw">Swahili</option>
+                    <option value="sv">Swedish</option>
+                    <option value="tl">Tagalog</option>
+                    <option value="ta">Tamil</option>
+                    <option value="th">Thai</option>
+                    <option value="tr">Turkish</option>
+                    <option value="uk">Ukrainian</option>
+                    <option value="ur">Urdu</option>
+                    <option value="vi">Vietnamese</option>
+                    <option value="cy">Welsh</option>
+                </select>
             </div>
             
             <div class="settings-row">
@@ -839,6 +877,11 @@ function selectMode(mode) {
                 var nameEl = document.getElementById('modeName');
                 if (nameEl && data.name) {
                     nameEl.value = data.name;
+                }
+                // Load language dropdown value
+                var langEl = document.getElementById('modeLang');
+                if (langEl && data.language) {
+                    langEl.value = data.language;
                 }
             } catch(e) {}
         }

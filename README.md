@@ -128,7 +128,7 @@ Each mode has independent settings:
 | Setting | Description |
 |---------|-------------|
 | **Input Mode** | Toggle (click-click) or Hold (press & hold) |
-| **Language** | Auto-detect or force specific language |
+| **Language** | 57 languages supported (English default) |
 | **Temperature** | 0.0 = precise, 1.0 = creative |
 | **Profanity Filter** | Replace bad words with *** |
 | **Filler Cleanup** | Remove "um", "uh", "like", etc. |
