@@ -5,6 +5,7 @@
 [![Windows](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078D6?logo=windows)](https://www.microsoft.com/windows)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://www.python.org)
 [![Groq](https://img.shields.io/badge/API-Groq%20Whisper-FF6B6B?logo=openai)](https://console.groq.com)
+[![Version](https://img.shields.io/badge/Version-1.3.0-blueviolet)](https://github.com/YourUsername/VoiceGrab)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 **Voice-to-Text Bridge for AI & Any Application**
@@ -28,13 +29,17 @@ VoiceGrab is a **lightweight Windows utility** that converts your voice to text 
 | Typing is slow | **Speak 3x faster** than typing |
 | AI prompts are long | **Voice input** for ChatGPT, Claude, Copilot |
 | Coding with voice | **Dictate comments**, docs, commit messages |
-| Multilingual input | **Auto-detect** or set language per mode |
+| Multilingual input | **57 languages** supported |
+| **Gaming chat** | **Voice-to-chat** in CS2, Dota 2, LoL, WoW, Valorant, Overwatch 2 |
+
+> 🎮 **Works with:** #CS2 #CounterStrike #Dota2 #LeagueOfLegends #WoW #Valorant #Overwatch2 #PUBG #Fortnite #Apex #R6Siege #Minecraft #Roblox #GTA5 #WoT #Lineage2
 
 ---
 
 ## ✨ Features
 
 - 🎤 **One-Click Recording** — Press `Right Ctrl` to record
+- ♾️ **Unlimited Recording** — Auto-segments every 3 min, no interruption!
 - ⚡ **Instant Transcription** — Powered by Groq Whisper (FREE tier!)
 - 📋 **Auto-Paste** — Text goes directly to active window
 - 🔄 **5 Modes** — AI Chat, Code, Docs, Notes, Custom
@@ -248,6 +253,19 @@ VoiceGrab/
 | Hotkey not working | Make sure VoiceGrab is in tray |
 | Rate limit exceeded | Wait 1 minute, or switch Whisper model |
 | Text not pasting | Focus target window before recording |
+
+---
+
+## 📋 Changelog
+
+### v1.3.0 (2024-12-15)
+- 🌍 **Language Support Expanded** — 57 languages with improved detection
+- 🔧 **Bug Fixes:**
+  - Fixed settings not persisting (Max Duration, Filler Words, etc.)
+  - Fixed audio files not saving to `recordings/` folder
+  - Fixed UTF-8 BOM encoding issues in config
+  - Fixed floating indicator color gradient and layout
+  - Fixed tooltip encoding issues
 
 ---
 

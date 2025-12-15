@@ -74,8 +74,8 @@ if (-not $CreatedNew) {
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$ConfigPath = Join-Path $ScriptDir "config.json"
+$script:ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$script:ConfigPath = Join-Path $script:ScriptDir "config.json"
 
 # ============ HTML UI ============
 $HTML = @'
@@ -635,10 +635,10 @@ select.lang-select { padding: 6px 10px; background: rgba(13, 17, 23, 0.8); borde
                     Prompt
                     <span class="tooltip">
                         <span class="help-btn">?</span>
-                        <span class="tooltip-text"><b>Prompt - Domain Terms:</b><br>Add terms from YOUR domain!<br>Example for design: Figma, mockup, wireframe, UI kit, prototype<br>Example for dev: Python, DataFrame, API, Docker<br>Helps Whisper recognize specialized vocabulary.</span>
+                        <span class="tooltip-text"><b>Whisper Prompt - Context Hint:</b><br>Max: ~224 tokens (~800 chars).<br>Add terms from YOUR domain:<br>- Dev: Python, API, Docker<br>- Design: Figma, wireframe<br>- Gaming: respawn, cooldown<br>Improves recognition accuracy.</span>
                     </span>
                 </div>
-                <div class="setting-desc" style="margin-bottom: 8px;">Context hint for Whisper</div>
+                <div class="setting-desc" style="margin-bottom: 8px;">Context hint for Whisper | <a href="action:openUrl:https://console.groq.com/docs/speech-text" style="color:#58a6ff;text-decoration:underline;">GROQ Whisper Docs</a></div>
                 <textarea class="prompt-input" id="modePrompt" onchange="saveModeField('prompt', this.value)">AI assistant prompts. Mixed language with technical terms.</textarea>
             </div>
             
@@ -839,6 +839,23 @@ function toggleModes() {
         toggle.innerText = '[-]';
         // Load all mode checkboxes when opening
         doAction('loadAllModeCheckboxes');
+        // Auto-load AI Chat mode settings (first tab is active by default)
+        doAction('loadMode:ai');
+        // Delayed update to ensure checkboxes are set after modeDataJson is populated
+        setTimeout(function() {
+            var dataEl = document.getElementById('modeDataJson');
+            if (dataEl && dataEl.value) {
+                try {
+                    var data = JSON.parse(dataEl.value);
+                    document.getElementById('modeProfanity').checked = data.profanity_filter === true || data.profanity_filter === 'true';
+                    document.getElementById('modeFillerCleanup').checked = data.filler_cleanup === true || data.filler_cleanup === 'true';
+                    var hallucEl = document.getElementById('modeHallucinationFilter');
+                    if (hallucEl) {
+                        hallucEl.checked = data.hallucination_filter !== false && data.hallucination_filter !== 'false';
+                    }
+                } catch(e) {}
+            }
+        }, 600);
     }
 }
 
@@ -859,13 +876,14 @@ function selectMode(mode) {
         modeNameRow.style.display = (mode === 'chat') ? 'flex' : 'none';
     }
     
-    // Update checkboxes after loadMode (via hidden data)
+    // Update checkboxes after loadMode (via hidden data) - need delay for PS1 to finish
     setTimeout(function() {
         var dataEl = document.getElementById('modeDataJson');
         if (dataEl && dataEl.value) {
             try {
                 var data = JSON.parse(dataEl.value);
-                document.getElementById('modeProfanity').checked = data.profanity_filter === true;
+                log('DEBUG modeDataJson: ' + dataEl.value);
+                document.getElementById('modeProfanity').checked = data.profanity_filter === true || data.profanity_filter === 'true';
                 document.getElementById('modeFillerCleanup').checked = data.filler_cleanup === true || data.filler_cleanup === 'true';
                 // Hallucination filter (default true if missing)
                 var hallucEl = document.getElementById('modeHallucinationFilter');
@@ -883,9 +901,11 @@ function selectMode(mode) {
                 if (langEl && data.language) {
                     langEl.value = data.language;
                 }
-            } catch(e) {}
+            } catch(e) { log('DEBUG parse error: ' + e); }
+        } else {
+            log('DEBUG modeDataJson NOT FOUND or empty');
         }
-    }, 100);
+    }, 500);
     log('Mode selected: ' + mode);
 }
 
@@ -901,7 +921,9 @@ function saveLang(lang) {
 
 function saveModeField(field, value) {
     var encoded = value;
-    if (typeof value === 'string') {
+    if (typeof value === 'boolean') {
+        encoded = value ? 'true' : 'false';
+    } else if (typeof value === 'string') {
         encoded = encodeURIComponent(value);
     }
     doAction('saveMode:' + currentMode + ':' + field + ':' + encoded);
@@ -1042,8 +1064,11 @@ function saveModeSettings() {
     var lang = document.getElementById('modeLang').value;
     var temp = document.getElementById('modeTemp').value / 10;
     var profanity = document.getElementById('modeProfanity').checked;
+    var fillerCleanup = document.getElementById('modeFillerCleanup').checked;
+    var halluc = document.getElementById('modeHallucinationFilter').checked;
     var prompt = document.getElementById('modePrompt').value;
     var fillers = document.getElementById('modeFillerWords').value;
+    var garbage = document.getElementById('modeGarbagePhrases').value;
     
     // Save each field (no hotkey - it's global now)
     saveModeField('input_mode', inputMode ? inputMode.value : 'toggle');
@@ -1051,8 +1076,11 @@ function saveModeSettings() {
     saveModeField('language', lang);
     saveModeField('temperature', temp);
     saveModeField('profanity_filter', profanity);
+    saveModeField('filler_cleanup', fillerCleanup);
+    saveModeField('hallucination_filter', halluc);
     saveModeField('prompt', prompt);
     saveModeField('filler_words', fillers);
+    saveModeField('garbage_phrases', garbage);
     
     log('Mode settings saved: ' + currentMode);
     showSaved();
@@ -1160,8 +1188,8 @@ function Get-DefaultConfig {
 
 function Get-Config {
     $defaults = Get-DefaultConfig
-    if (Test-Path $ConfigPath) {
-        $saved = Get-Content $ConfigPath -Raw | ConvertFrom-Json
+    if (Test-Path $script:ConfigPath) {
+        $saved = Get-Content $script:ConfigPath -Raw | ConvertFrom-Json
         # Merge with defaults
         if (-not $saved.global) { $saved | Add-Member -NotePropertyName "global" -NotePropertyValue $defaults.global -Force }
         if (-not $saved.input) { $saved | Add-Member -NotePropertyName "input" -NotePropertyValue $defaults.input -Force }
@@ -1172,7 +1200,16 @@ function Get-Config {
 }
 
 function Save-Config($config) {
-    $config | ConvertTo-Json -Depth 10 | Set-Content $ConfigPath -Encoding UTF8
+    try {
+        $path = $script:ConfigPath
+        if (-not $path) { $path = Join-Path $PSScriptRoot "config.json" }
+        $config | ConvertTo-Json -Depth 10 | Set-Content $path -Encoding UTF8
+        # Debug: write to file
+        "$(Get-Date) - Saved to: $path" | Out-File "$PSScriptRoot\save_debug.log" -Append
+    }
+    catch {
+        "$(Get-Date) - ERROR: $_" | Out-File "$PSScriptRoot\save_debug.log" -Append
+    }
 }
 
 # ============ Python Detection ============
@@ -1337,7 +1374,13 @@ function Show-WebView2Window {
                         if (-not $config.global) { 
                             $config | Add-Member -NotePropertyName "global" -NotePropertyValue @{} -Force 
                         }
-                        $config.global.max_duration = $duration
+                        # Use Add-Member for PSCustomObject compatibility
+                        if ($config.global.PSObject.Properties['max_duration']) {
+                            $config.global.max_duration = $duration
+                        }
+                        else {
+                            $config.global | Add-Member -NotePropertyName "max_duration" -NotePropertyValue $duration -Force
+                        }
                         Save-Config $config
                         if ($logEl) { $logEl.InnerHtml += "Max duration: ${duration}s<br>" }
                     }
@@ -1542,19 +1585,16 @@ function Show-WebView2Window {
                             $tempInt = [int]($modeData.temperature * 10)
                             if ($tempEl) { $tempEl.SetAttribute("value", $tempInt) }
                             if ($tempValEl) { $tempValEl.InnerText = $modeData.temperature.ToString("0.0") }
-                            # Profanity filter checkbox - set checked property directly
-                            if ($profanityEl) {
-                                $profanityEl.checked = $($modeData.profanity_filter -eq $true)
-                            }
+                            # Note: checkboxes are set via JavaScript eval below
                             
                             if ($promptEl) { $promptEl.InnerText = $modeData.prompt }
                             if ($fillerEl -and $modeData.filler_words) {
                                 $fillerEl.SetAttribute("value", ($modeData.filler_words -join ", "))
                             }
-                            # Filler cleanup checkbox - set checked property directly
-                            $fillerCleanupEl = $doc.GetElementById("modeFillerCleanup")
-                            if ($fillerCleanupEl) {
-                                $fillerCleanupEl.checked = $($modeData.filler_cleanup -eq $true)
+                            # Garbage phrases textarea - load saved values
+                            $garbageEl = $doc.GetElementById("modeGarbagePhrases")
+                            if ($garbageEl -and $modeData.garbage_phrases) {
+                                $garbageEl.InnerText = ($modeData.garbage_phrases -join ", ")
                             }
                             
                             # Write checkbox and mode data to hidden input for JavaScript to read
@@ -1577,6 +1617,20 @@ function Show-WebView2Window {
                             else {
                                 if ($inputToggleEl) { $inputToggleEl.SetAttribute("checked", "checked") }
                                 if ($inputHoldEl) { $inputHoldEl.RemoveAttribute("checked") }
+                            }
+                            # DIRECT JavaScript eval to set checkboxes (most reliable method)
+                            $profVal = if ($modeData.profanity_filter -eq $true) { "true" } else { "false" }
+                            $fillerVal = if ($modeData.filler_cleanup -eq $true) { "true" } else { "false" }
+                            $hallucVal = if ($modeData.hallucination_filter -eq $false) { "false" } else { "true" }
+                            $jsCode = "document.getElementById('modeProfanity').checked = $profVal; "
+                            $jsCode += "document.getElementById('modeFillerCleanup').checked = $fillerVal; "
+                            $jsCode += "document.getElementById('modeHallucinationFilter').checked = $hallucVal;"
+                            if ($logEl) { $logEl.InnerHtml += "DEBUG: Setting checkboxes: profanity=$profVal, filler=$fillerVal, halluc=$hallucVal<br>" }
+                            try { 
+                                $doc.parentWindow.eval($jsCode) 
+                            }
+                            catch {
+                                if ($logEl) { $logEl.InnerHtml += "DEBUG eval error: $_<br>" }
                             }
                         }
                         if ($logEl) { $logEl.InnerHtml += "Mode loaded: $modeName<br>" }

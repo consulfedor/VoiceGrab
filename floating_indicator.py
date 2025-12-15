@@ -101,7 +101,7 @@ class FloatingIndicator:
             bg='#1a1a2e',
             cursor='hand2'  # Hand cursor to show it's clickable
         )
-        self.mode_label.pack(anchor='w')
+        self.mode_label.pack(anchor='center')  # Centered below Recording
         self.mode_label.bind('<Button-1>', self._on_mode_click)
         
         # Progress bar canvas - thicker for visibility
@@ -258,10 +258,10 @@ class FloatingIndicator:
             secs = int(elapsed) % 60
             progress = elapsed / self.max_duration
             
-            # Color based on progress
-            if progress < 0.5:
-                color = '#00d4ff'  # Cyan
-            elif progress < 0.75:
+            # Color based on progress (green → yellow → red at 33%/66%)
+            if progress < 0.33:
+                color = '#00ff88'  # Green
+            elif progress < 0.66:
                 color = '#ffdd00'  # Yellow
             else:
                 color = '#ff4444'  # Red
@@ -272,7 +272,8 @@ class FloatingIndicator:
             self.dot_label.config(text=pulse, fg=color)
             self.label.config(text=" Recording", fg=color)
             remaining = max(0, self.max_duration - int(elapsed))
-            self.time_label.config(text=f"{mins}:{secs:02d} • {remaining}s left")
+            # Show AutoRec countdown
+            self.time_label.config(text=f"{mins}:{secs:02d} • AutoRec in {remaining}s")
             self.mode_label.config(text=f"◀ {self.mode_name} ▶")
             self._draw_progress(progress, color)
         else:

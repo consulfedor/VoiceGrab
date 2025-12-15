@@ -310,9 +310,18 @@ def show_timer():
         
         if remaining <= 0:
             clear_line()
-            print(f'\r⏰ Auto-send ({MAX_DURATION}s limit)')
-            do_stop_and_process()
-            break
+            print(f'\r⏰ Auto-segment ({MAX_DURATION}s) - continuing...')
+            # Show brief feedback in indicator
+            if indicator and USE_INDICATOR:
+                indicator.show_processing()  # Brief "Sending..." flash
+            # Process current segment in background, recording continues
+            process_segment()
+            # Restore recording display after brief moment
+            if indicator and USE_INDICATOR:
+                time.sleep(0.3)
+                indicator.start_recording(get_mode_name(current_mode))
+            # Timer was reset by process_segment, loop continues
+            continue
         
         time.sleep(0.5)
 
@@ -350,6 +359,99 @@ def do_start_recording():
         print(f"[ERROR] do_start_recording crashed: {e}")
         import traceback
         traceback.print_exc()
+
+
+def process_segment():
+    """Process current audio segment without stopping recording (for auto-segmentation)"""
+    global record_start_time
+    
+    # Collect audio from queue
+    data = []
+    while not audio_queue.empty():
+        data.append(audio_queue.get())
+    
+    if not data:
+        return
+    
+    audio = np.concatenate(data, axis=0)
+    duration = len(audio) / SAMPLE_RATE
+    
+    if duration < 0.5:
+        return
+    
+    # Reset timer for next segment
+    record_start_time = time.time()
+    
+    # Process in background
+    def _process():
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        recordings_dir = SCRIPT_DIR / "recordings"
+        recordings_dir.mkdir(exist_ok=True)
+        
+        try:
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+                sf.write(tmp.name, audio, SAMPLE_RATE)
+                tmp_path = tmp.name
+        except Exception as e:
+            print(f"Error creating temp file: {e}")
+            return
+        
+        try:
+            text = transcribe(tmp_path)
+        except Exception as e:
+            print(f"Error in transcribe: {e}")
+            text = None
+        
+        if text:
+            try:
+                text = cleanup_text(text, current_mode)
+            except Exception as e:
+                print(f"Error in cleanup_text: {e}")
+        
+        # Save audio if enabled
+        import json
+        config_path = SCRIPT_DIR / "config.json"
+        try:
+            with open(config_path, 'r', encoding='utf-8-sig') as f:
+                current_cfg = json.load(f)
+            save_audio = current_cfg.get('global', {}).get('save_audio', False)
+        except Exception as e:
+            save_audio = False
+        
+        if save_audio:
+            import shutil
+            saved_path = recordings_dir / f"recording_{timestamp}.wav"
+            try:
+                shutil.copy(tmp_path, saved_path)
+                print(f"💾 Segment saved: {saved_path.name}")
+            except Exception as e:
+                print(f"❌ Segment save failed: {e}")
+        
+        os.remove(tmp_path)
+        
+        if text:
+            print(f"📝 Segment: {text[:50]}...")
+            pyperclip.copy(text)
+            time.sleep(0.1)
+            # Use pynput Controller for Ctrl+V (no admin needed)
+            kb = pynput_keyboard.Controller()
+            kb.press(pynput_keyboard.Key.ctrl)
+            kb.press('v')
+            kb.release('v')
+            kb.release(pynput_keyboard.Key.ctrl)
+            
+            # Log texts if enabled
+            log_texts = cfg.get('global', {}).get('log_texts', True)
+            if log_texts:
+                date_only = datetime.now().strftime("%Y%m%d")
+                log_path = recordings_dir / f"transcription_log_{date_only}.txt"
+                with open(log_path, 'a', encoding='utf-8') as f:
+                    time_only = datetime.now().strftime("%H:%M:%S")
+                    f.write(f"\n[{time_only}] {get_mode_name(current_mode)} (segment)\n{text}\n")
+    
+    threading.Thread(target=_process, daemon=True).start()
 
 
 def do_stop_and_process():
@@ -415,18 +517,24 @@ def do_stop_and_process():
     
     # Check save_audio setting from config (reload to get current value)
     import json
+    config_path = SCRIPT_DIR / "config.json"  # FIXED: was CONFIG_PATH (undefined)
     try:
-        with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+        with open(config_path, 'r', encoding='utf-8-sig') as f:  # utf-8-sig handles BOM
             current_cfg = json.load(f)
         save_audio = current_cfg.get('global', {}).get('save_audio', False)
-    except:
+        print(f"[DEBUG] save_audio = {save_audio}")
+    except Exception as e:
+        print(f"[DEBUG] save_audio error: {e}")
         save_audio = False
     if save_audio:
         # Copy to recordings folder with timestamp
         import shutil
         saved_path = recordings_dir / f"recording_{timestamp}.wav"
-        shutil.copy(tmp_path, saved_path)
-        print(f"💾 Saved: {saved_path.name}")
+        try:
+            shutil.copy(tmp_path, saved_path)
+            print(f"💾 Saved: {saved_path.name}")
+        except Exception as e:
+            print(f"❌ Save failed: {e}")
     
     # Clean up temp file
     os.remove(tmp_path)
@@ -512,10 +620,19 @@ def on_release(key):
         print("[DEBUG] Stopping recording (key released)...")
         do_stop_and_process()
     
-    # ESC to exit
+    # ESC to cancel current recording (not exit!)
     if key == pynput_keyboard.Key.esc:
-        print("\n👋 Bye!")
-        return False  # Stop listener
+        if recording:
+            recording = False
+            # Clear audio queue
+            while not audio_queue.empty():
+                try:
+                    audio_queue.get_nowait()
+                except:
+                    pass
+            print("⏹️ Recording cancelled")
+            if indicator:
+                indicator.hide()
 
 
 def main():
@@ -625,7 +742,7 @@ def main():
                 if tray:
                     tray.set_mode(new_mode)
             
-            indicator = FloatingIndicator(on_mode_click=next_mode)
+            indicator = FloatingIndicator(max_duration=MAX_DURATION, on_mode_click=next_mode)
             indicator.run_in_thread()
         except Exception as e:
             print(f"⚠️ Indicator disabled: {e}")
