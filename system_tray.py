@@ -54,36 +54,91 @@ class SystemTray:
         self.recording = False
         self.current_mode = "ai"
         
+        # Sync mode from Settings window
+        self._sync_mode_from_file()
+        
         if not TRAY_AVAILABLE:
             return
         
         self._create_icon()
     
+    def _sync_mode_from_file(self):
+        """Read mode from mode_sync.txt (written by Settings window)"""
+        mode_sync_file = SCRIPT_DIR / "mode_sync.txt"
+        try:
+            if mode_sync_file.exists():
+                synced = mode_sync_file.read_text(encoding='utf-8').strip()
+                print(f"[TRAY SYNC] File exists, content: '{synced}', current: '{self.current_mode}'")
+                if synced in ['ai', 'code', 'docs', 'notes', 'chat']:
+                    self.current_mode = synced
+                    print(f"[TRAY SYNC] Mode updated to: {synced}")
+            else:
+                print(f"[TRAY SYNC] File not found: {mode_sync_file}")
+        except Exception as e:
+            print(f"[TRAY SYNC] Error: {e}")
+    
     def _create_icon(self):
         """Create the tray icon"""
         image = create_icon_image(self.recording, self.current_mode)
         
+        def check_mode(mode):
+            """Lambda for checking mode - reads from file for latest value"""
+            # Read latest mode from file (in case changed externally)
+            mode_sync_file = SCRIPT_DIR / "mode_sync.txt"
+            try:
+                if mode_sync_file.exists():
+                    file_mode = mode_sync_file.read_text(encoding='utf-8').strip()
+                    if file_mode in ['ai', 'code', 'docs', 'notes', 'chat']:
+                        self.current_mode = file_mode
+            except:
+                pass
+            result = self.current_mode == mode
+            print(f"[TRAY CHECK] mode={mode}, current={self.current_mode}, result={result}")
+            return result
+        
+        # Load custom mode names from config.json
+        mode_names = {
+            'ai': '🤖 AI Chat',
+            'code': '💻 Code',
+            'docs': '📋 Docs',
+            'notes': '📝 Notes',
+            'chat': '💬 Chat'
+        }
+        try:
+            import json
+            config_file = SCRIPT_DIR / "config.json"
+            if config_file.exists():
+                with open(config_file, 'r', encoding='utf-8') as f:
+                    cfg = json.load(f)
+                modes = cfg.get('modes', {})
+                icons = {'ai': '🤖', 'code': '💻', 'docs': '📋', 'notes': '📝', 'chat': '💬'}
+                for key in mode_names:
+                    if key in modes and modes[key].get('name'):
+                        mode_names[key] = f"{icons.get(key, '')} {modes[key]['name']}"
+        except:
+            pass
+        
+        # Get current mode name for status display
+        current_mode_name = mode_names.get(self.current_mode, 'AI Chat')
+        
+        # TODO: Future - improve tray menu with better platform (WebView2)
+        # For now: simplified menu without mode switching (use Floating Indicator instead)
         menu = pystray.Menu(
             pystray.MenuItem("🎤 VoiceGrab", None, enabled=False),
             pystray.Menu.SEPARATOR,
-            pystray.MenuItem("⚙️ Settings", self._open_settings),
+            pystray.MenuItem(f"Mode: {current_mode_name}", None, enabled=False),
             pystray.Menu.SEPARATOR,
-            pystray.MenuItem("Mode:", None, enabled=False),
-            pystray.MenuItem("  🤖 AI Chat", lambda icon, item: self._set_mode("ai"), 
-                           checked=lambda item: self.current_mode == "ai"),
-            pystray.MenuItem("  💻 Code", lambda icon, item: self._set_mode("code"),
-                           checked=lambda item: self.current_mode == "code"),
-            pystray.MenuItem("  📋 Docs", lambda icon, item: self._set_mode("docs"),
-                           checked=lambda item: self.current_mode == "docs"),
-            pystray.MenuItem("  📝 Notes", lambda icon, item: self._set_mode("notes"),
-                           checked=lambda item: self.current_mode == "notes"),
-            pystray.MenuItem("  💬 Chat", lambda icon, item: self._set_mode("chat"),
-                           checked=lambda item: self.current_mode == "chat"),
+            pystray.MenuItem("📁 Transcribe File (Google)", self._open_ai_studio),
+            pystray.MenuItem("⚙️ Settings", self._open_settings),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("❌ Exit", self._exit)
         )
         
         self.icon = pystray.Icon("VoiceGrab", image, "VoiceGrab", menu)
+    
+    def _open_ai_studio(self, icon=None, item=None):
+        """Open Google AI Studio for batch file transcription"""
+        webbrowser.open("https://aistudio.google.com/prompts/new_chat")
     
     def _open_settings(self, icon=None, item=None):
         """Open main settings window (VoiceGrab.ps1) - closes existing first"""
@@ -139,6 +194,12 @@ class SystemTray:
     def _set_mode(self, mode):
         """Change mode"""
         self.current_mode = mode
+        # Write to sync file so Settings and Indicator can pick it up
+        try:
+            mode_sync_file = SCRIPT_DIR / "mode_sync.txt"
+            mode_sync_file.write_text(mode, encoding='utf-8')
+        except:
+            pass
         if self.on_mode_change:
             self.on_mode_change(mode)
         self._update_icon()

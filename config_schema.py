@@ -1,126 +1,33 @@
 """
 VoiceGrab Config Schema
-Defines default configuration and validation
+Loads defaults from config_default.json (single source of truth)
 """
 
 import json
 import copy
 from pathlib import Path
 
-# Default configuration - can be reset to this
-DEFAULT_CONFIG = {
-    "version": "1.0",
-    
-    "api": {
-        "key": "",
-        "provider": "groq",
-        "model": "whisper-large-v3"
-    },
-    
-    "input": {
-        "mode": "toggle",  # toggle or hold
-        "hotkey": "ctrl r",
-        "mode_switch": "hotkeys",  # hotkeys, cycle, fixed
-        "cycle_hotkey": "ctrl r+tab",  # for cycle mode
-        "mode_hotkeys": {
-            "ai": "ctrl r+1",
-            "code": "ctrl r+2",
-            "docs": "ctrl r+3",
-            "notes": "ctrl r+4",
-            "empty": "ctrl r+5"
-        }
-    },
-    
-    "recording": {
-        "max_duration": 180,
-        "min_duration": 0.5,
-        "sample_rate": 16000
-    },
-    
-    "modes": {
-        "default": "ai",
-        "templates": {
-            "ai": {
-                "name": "🤖 AI Chat",
-                "description": "Промпты для Claude, GPT, Gemini",
-                "prompt": "Формулировка промпта для AI ассистента. Русский язык, английские технические термины допустимы.",
-                "censor": False,
-                "cleanup": True
-            },
-            "code": {
-                "name": "💻 Code",
-                "description": "Программирование и архитектура",
-                "prompt": "Программирование, Python, JavaScript, API, Docker, Git. Технический контекст, русский с английскими терминами.",
-                "censor": False,
-                "cleanup": True
-            },
-            "docs": {
-                "name": "📋 Docs",
-                "description": "Документация и спецификации",
-                "prompt": "Техническая документация, ТЗ, спецификации. Формальный русский язык.",
-                "censor": False,
-                "cleanup": True
-            },
-            "notes": {
-                "name": "📝 Notes",
-                "description": "Заметки для Obsidian, NotebookLM",
-                "prompt": "Заметки, мысли, идеи. Структурировать по пунктам если уместно.",
-                "censor": False,
-                "cleanup": True
-            },
-            "empty": {
-                "name": "💬 Custom",
-                "description": "Пустой шаблон для своего",
-                "prompt": "",
-                "censor": False,
-                "cleanup": False
-            }
-        }
-    },
-    
-    "cleanup": {
-        "enabled": True,
-        "use_prompt": True,
-        "use_regex": True,
-        "filler_words": [
-            "эм", "ээ", "ну", "типа", "как бы", 
-            "короче", "в общем", "значит", "ну типа",
-            "блин", "вот"
-        ],
-        "garbage_phrases": [
-            "Продолжение следует",
-            "продолжение следует",
-            "Subtitles by",
-            "Subscribe",
-            "Thank you for watching",
-            "Спасибо за просмотр",
-            "Подписывайтесь"
-        ]
-    },
-    
-    "language": {
-        "primary": "ru",
-        "allow_english": True
-    },
-    
-    "ui": {
-        "floating_indicator": True,
-        "show_timer": True,
-        "show_mode": True,
-        "preview_length": 100
-    },
-    
-    "storage": {
-        "save_audio": "never",  # never, session, always
-        "audio_dir": "recordings",  # relative to script dir
-        "log_transcriptions": "always",  # never, session, always
-        "log_file": "transcriptions.log"  # relative to script dir
-    },
-    
-    "shortcuts": {
-        "create_desktop": False
+# Load default configuration from config_default.json (SINGLE SOURCE OF TRUTH)
+def _load_default_config():
+    """Load defaults from config_default.json"""
+    default_path = Path(__file__).parent / "config_default.json"
+    if default_path.exists():
+        try:
+            with open(default_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error loading config_default.json: {e}")
+    # Minimal fallback if file missing
+    return {
+        "version": "2.3.0",
+        "api": {"key": "", "provider": "groq", "model": "whisper-large-v3"},
+        "input": {"mode": "toggle", "hotkey": "ctrl r"},
+        "global": {"save_audio": False, "max_duration": 180, "default_mode": "ai", "active_mode": "ai"},
+        "modes": {},
+        "ui": {"floating_indicator": True}
     }
-}
+
+DEFAULT_CONFIG = _load_default_config()
 
 
 class Config:

@@ -7,3 +7,4 @@ pyperclip
 python-dotenv
 pystray
 pillow
+google-genai

@@ -61,6 +61,10 @@ check_singleton()
 import atexit
 atexit.register(cleanup_lock)
 
+# Startup log with timestamp to confirm code version
+from datetime import datetime
+print(f"[STARTUP] VoiceGrab loaded at {datetime.now().strftime('%H:%M:%S')} - MODE_SYNC v2")
+
 # Import config
 sys.path.insert(0, str(SCRIPT_DIR))
 from config_schema import get_config
@@ -138,6 +142,47 @@ recording = False
 audio_queue = queue.Queue()
 record_start_time = 0
 indicator = None
+indicator_override = False  # True when indicator changes mode during recording
+
+# Mode sync - read active_mode from config.json directly (most reliable)
+MODE_SYNC_FILE = SCRIPT_DIR / "mode_sync.txt"  # Keep for backward compat
+CONFIG_FILE = SCRIPT_DIR / "config.json"  # Main config file
+
+def debug_log(msg):
+    """Log debug message to file (since console is hidden)"""
+    try:
+        with open(SCRIPT_DIR / "debug.log", "a", encoding="utf-8") as f:
+            from datetime import datetime
+            f.write(f"{datetime.now().strftime('%H:%M:%S')} {msg}\n")
+    except:
+        pass
+
+def get_synced_mode():
+    """Read active mode from config.json - single source of truth"""
+    import json  # Local import to ensure it's available
+    try:
+        debug_log(f"get_synced_mode() called, CONFIG_FILE={CONFIG_FILE}")
+        # Primary: read from config.json active_mode
+        if CONFIG_FILE.exists():
+            with open(CONFIG_FILE, 'r', encoding='utf-8-sig') as f:
+                cfg = json.load(f)
+            active = cfg.get('global', {}).get('active_mode')
+            debug_log(f"config.json active_mode = {active}")
+            if active and active in ['ai', 'code', 'docs', 'notes', 'chat']:
+                print(f"[CONFIG] active_mode from config.json: {active}")
+                return active
+        
+        # Fallback: try mode_sync.txt
+        if MODE_SYNC_FILE.exists():
+            synced = MODE_SYNC_FILE.read_text(encoding='utf-8').strip()
+            debug_log(f"mode_sync.txt = {synced}")
+            if synced in ['ai', 'code', 'docs', 'notes', 'chat']:
+                print(f"[CONFIG] mode from mode_sync.txt fallback: {synced}")
+                return synced
+    except Exception as e:
+        debug_log(f"Error: {e}")
+        print(f"[CONFIG] Error reading mode: {e}")
+    return None
 
 # Mode hotkey mapping
 MODE_KEYS = {
@@ -221,46 +266,190 @@ def cleanup_text(text, mode_key):
     return text.strip()
 
 
+def auto_translate(text, mode_key):
+    """Auto-translate text based on mode settings using Groq API"""
+    debug_log(f"auto_translate() called, mode_key={mode_key}")
+    # Reload config to get fresh settings
+    import json
+    config_path = SCRIPT_DIR / "config.json"
+    try:
+        with open(config_path, 'r', encoding='utf-8-sig') as f:
+            current_cfg = json.load(f)
+    except:
+        return text
+    
+    mode_cfg = current_cfg.get('modes', {}).get(mode_key, {})
+    translate_mode = mode_cfg.get('auto_translate', 'off')
+    
+    if translate_mode == 'off' or not text:
+        return text
+    
+    target_lang = mode_cfg.get('translate_lang', 'EN')
+    translate_engine = mode_cfg.get('translate_engine', 'groq')
+    lang_names = {'EN': 'English', 'RU': 'Russian', 'DE': 'German', 
+                  'FR': 'French', 'ES': 'Spanish', 'ZH': 'Chinese', 
+                  'JA': 'Japanese', 'TR': 'Turkish'}
+    lang_name = lang_names.get(target_lang, 'English')
+    
+    print(f"[Auto-Translate] Mode: {translate_mode}, Target: {lang_name}, Engine: {translate_engine}")
+    
+    translation = None
+    
+    try:
+        if translate_engine == 'groq':
+            api_key = current_cfg.get('api', {}).get('key')
+            if not api_key:
+                print("[Auto-Translate] No Groq API key!")
+                return text
+            client = Groq(api_key=api_key)
+            response = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[
+                    {"role": "system", "content": f"You are a translation machine. Translate to {lang_name}. Output ONLY the translation, nothing else."},
+                    {"role": "user", "content": f"Translate: {text}"}
+                ],
+                temperature=0.1
+            )
+            translation = response.choices[0].message.content.strip()
+            
+        elif translate_engine == 'gemini':
+            import requests
+            gemini_key = current_cfg.get('gemini', {}).get('key')
+            if not gemini_key:
+                print("[Auto-Translate] No Gemini API key!")
+                return text
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
+            body = {
+                "contents": [{"parts": [{"text": f"Translate to {lang_name}. Output ONLY the translation:\n{text}"}]}]
+            }
+            resp = requests.post(url, json=body, timeout=30)
+            if resp.status_code == 200:
+                translation = resp.json()['candidates'][0]['content']['parts'][0]['text'].strip()
+            else:
+                print(f"[Auto-Translate] Gemini error: {resp.status_code}")
+                
+        elif translate_engine == 'deepl':
+            import requests
+            deepl_key = current_cfg.get('deepl', {}).get('key')
+            if not deepl_key:
+                print("[Auto-Translate] No DeepL API key!")
+                return text
+            url = "https://api-free.deepl.com/v2/translate"
+            body = {"text": [text], "target_lang": target_lang}
+            headers = {"Authorization": f"DeepL-Auth-Key {deepl_key}", "Content-Type": "application/json"}
+            resp = requests.post(url, json=body, headers=headers, timeout=30)
+            if resp.status_code == 200:
+                translation = resp.json()['translations'][0]['text']
+            else:
+                print(f"[Auto-Translate] DeepL error: {resp.status_code}")
+        
+        if translation:
+            print(f"[Auto-Translate] Result: {translation[:50]}...")
+            if translate_mode == 'replace':
+                return translation
+            elif translate_mode == 'append':
+                return f"{text} [{target_lang}: {translation}]"
+                
+    except Exception as e:
+        print(f"⚠️ Translation error: {e}")
+    
+    return text
+
+
+
 def callback(indata, frames, time_info, status):
     """Audio callback"""
     if recording:
         audio_queue.put(indata.copy())
 
 
-def transcribe(filename):
-    """Send to Groq Whisper"""
-    global current_mode
-    
-    # Get mode settings
-    mode_cfg = MODES.get(current_mode, {})
-    prompt = get_prompt(current_mode)
+def transcribe_groq(filename, mode_cfg, prompt):
+    """Transcribe using Groq Whisper API"""
     model = mode_cfg.get('model', 'whisper-large-v3')
     language = mode_cfg.get('language', 'ru')
     temperature = mode_cfg.get('temperature', 0.0)
-    profanity_filter = mode_cfg.get('profanity_filter', False)
     
     client = Groq(api_key=API_KEY)
     
+    with open(filename, "rb") as f:
+        params = {
+            'file': (filename, f.read()),
+            'model': model,
+            'response_format': 'json',
+            'prompt': prompt,
+            'temperature': temperature
+        }
+        if language and language != 'auto':
+            params['language'] = language
+        
+        result = client.audio.transcriptions.create(**params)
+    
+    return result.text
+
+
+def transcribe_gemini(filename):
+    """Transcribe using Gemini API"""
     try:
-        with open(filename, "rb") as f:
-            # Build API params
-            params = {
-                'file': (filename, f.read()),
-                'model': model,
-                'response_format': 'json',
-                'prompt': prompt,
-                'temperature': temperature
-            }
-            # Only set language if not 'auto'
-            if language and language != 'auto':
-                params['language'] = language
-            
-            result = client.audio.transcriptions.create(**params)
+        from google import genai
+    except ImportError:
+        return "[Gemini] Error: google-genai not installed"
+    
+    gemini_key = cfg.get('api', {}).get('gemini_key', '')
+    if not gemini_key:
+        return "[Gemini] Error: API key not configured"
+    
+    try:
+        client = genai.Client(api_key=gemini_key)
+        myfile = client.files.upload(file=filename)
         
-        text = result.text
+        # Get model from config, default to gemini-1.5-flash
+        gemini_model = cfg.get('api', {}).get('gemini_model', 'gemini-1.5-flash')
         
-        # Apply cleanup if enabled for this mode
-        if should_cleanup(current_mode):
+        response = client.models.generate_content(
+            model=gemini_model,
+            contents=['Transcribe this audio accurately. Output only the transcription text, nothing else:', myfile]
+        )
+        return response.text
+    except Exception as e:
+        return f"[Gemini] Error: {str(e)[:50]}"
+
+
+def transcribe(filename):
+    """Transcribe audio using configured provider (groq/gemini/both)"""
+    global current_mode, cfg
+    
+    debug_log(f"transcribe() called, current_mode={current_mode}")
+    
+    # Reload config to get latest provider/model settings
+    cfg = config.load()
+    
+    # Get mode settings from FRESH config (not stale global MODES)
+    modes = cfg.get('modes', {})
+    mode_cfg = modes.get(current_mode, {})
+    prompt = get_prompt(current_mode)
+    profanity_filter = mode_cfg.get('profanity_filter', False)
+    
+    # Get provider from config
+    provider = cfg.get('global', {}).get('transcription_provider', 'groq')
+    
+    try:
+        if provider == 'groq':
+            text = transcribe_groq(filename, mode_cfg, prompt)
+        elif provider == 'gemini':
+            text = transcribe_gemini(filename)
+        elif provider == 'both':
+            # Run both and combine results
+            groq_text = transcribe_groq(filename, mode_cfg, prompt)
+            gemini_text = transcribe_gemini(filename)
+            text = f"[Groq]: {groq_text}\n[Gemini]: {gemini_text}"
+        else:
+            text = transcribe_groq(filename, mode_cfg, prompt)
+        
+        if text is None:
+            return None
+        
+        # Apply cleanup if enabled (only for single provider results)
+        if provider != 'both' and should_cleanup(current_mode):
             text = cleanup_text(text, current_mode)
         
         # Apply profanity filter if enabled
@@ -328,12 +517,30 @@ def show_timer():
 
 def do_start_recording():
     """Start recording"""
-    global recording, record_start_time
+    global recording, record_start_time, current_mode, indicator_override
     
     if recording:
         return
     
+    # Reset indicator override - new recording reads from Settings
+    indicator_override = False
+    
     try:
+        debug_log(f"do_start_recording() called, current_mode={current_mode}")
+        # FORCED SYNC: Read mode from file RIGHT NOW to ensure we use what Settings set
+        synced = get_synced_mode()
+        debug_log(f"synced={synced}")
+        print(f"[SYNC] File={synced}, Before={current_mode}")
+        if synced:
+            # ALWAYS use mode from file - this is the source of truth
+            if synced != current_mode:
+                current_mode = synced
+                debug_log(f"Mode changed to: {synced}")
+                print(f"🔄 Mode changed to: {get_mode_name(synced)}")
+                if tray:
+                    tray.set_mode(synced)
+            # Update indicator with current (possibly updated) mode
+        
         # Clear queue
         with audio_queue.mutex:
             audio_queue.queue.clear()
@@ -343,10 +550,11 @@ def do_start_recording():
         
         print()  # New line
         
-        # Show indicator
+        # Show indicator with CURRENT synced mode (ALWAYS use fresh current_mode)
+        active_mode = synced if synced else current_mode
         if indicator and USE_INDICATOR:
             try:
-                indicator.start_recording(get_mode_name(current_mode))
+                indicator.start_recording(get_mode_name(active_mode))
             except Exception as e:
                 print(f"[DEBUG] Indicator error: {e}")
         
@@ -433,6 +641,10 @@ def process_segment():
         
         if text:
             print(f"📝 Segment: {text[:50]}...")
+            
+            # Auto-translate if enabled in mode settings
+            text = auto_translate(text, current_mode)
+            
             pyperclip.copy(text)
             time.sleep(0.1)
             # Use pynput Controller for Ctrl+V (no admin needed)
@@ -456,7 +668,17 @@ def process_segment():
 
 def do_stop_and_process():
     """Stop and process recording"""
-    global recording
+    global recording, current_mode
+    
+    # Check if Settings window has synced a different mode
+    # BUT skip if indicator override is active (user changed mode via indicator)
+    if not indicator_override:
+        synced = get_synced_mode()
+        if synced and synced != current_mode:
+            print(f"📝 Mode synced from Settings: {synced}")
+            current_mode = synced
+    else:
+        debug_log(f"do_stop_and_process: SKIPPING sync (indicator_override=True, using {current_mode})")
     
     if not recording:
         return
@@ -514,6 +736,8 @@ def do_stop_and_process():
     # and filler words (if enabled for this mode)
     if text:
         text = cleanup_text(text, current_mode)
+        # Auto-translate if enabled in mode settings
+        text = auto_translate(text, current_mode)
     
     # Check save_audio setting from config (reload to get current value)
     import json
@@ -730,13 +954,24 @@ def main():
             MODE_ORDER = ['ai', 'code', 'docs', 'notes', 'chat']
             
             def next_mode():
-                """Switch to next mode (click on indicator)"""
-                global current_mode
+                """Switch to next mode (click on indicator) - TEMPORARY for this session"""
+                global current_mode, indicator_override
                 idx = MODE_ORDER.index(current_mode) if current_mode in MODE_ORDER else 0
                 next_idx = (idx + 1) % len(MODE_ORDER)
                 new_mode = MODE_ORDER[next_idx]
                 current_mode = new_mode
-                print(f"\n🔄 Mode: {get_mode_name(new_mode)}")
+                indicator_override = True  # Prevent watcher from overwriting this change
+                print(f"\n🔄 Mode: {get_mode_name(new_mode)} (session override)")
+                debug_log(f"next_mode: switched to {new_mode} (indicator_override=True)")
+                
+                # NOTE: Do NOT save to config.json - indicator changes are TEMPORARY
+                # Next recording will read from Settings tab (config.json active_mode)
+                
+                # Write to mode_sync.txt for tray sync (temporary)
+                try:
+                    MODE_SYNC_FILE.write_text(new_mode, encoding='utf-8')
+                except:
+                    pass
                 if indicator:
                     indicator.update_mode(get_mode_name(new_mode))
                 if tray:
@@ -746,6 +981,46 @@ def main():
             indicator.run_in_thread()
         except Exception as e:
             print(f"⚠️ Indicator disabled: {e}")
+    
+    # Start mode sync watcher - polls config.json to sync with Settings
+    def mode_sync_watcher():
+        """Poll config.json and update all components when Settings changes mode"""
+        global current_mode, indicator_override
+        # Start with current mode from file if exists
+        initial_synced = get_synced_mode()
+        if initial_synced:
+            current_mode = initial_synced
+            print(f"[MODE SYNC] Initial mode from file: {initial_synced}")
+        
+        last_synced_mode = current_mode
+        while True:
+            try:
+                # Skip syncing if indicator override is active (user changed mode via indicator)
+                if indicator_override:
+                    debug_log(f"watcher: SKIPPING (indicator_override=True)")
+                    time.sleep(0.5)
+                    continue
+                
+                synced = get_synced_mode()
+                if synced and synced != last_synced_mode:
+                    debug_log(f"watcher: OVERWRITING current_mode from {current_mode} to {synced}")
+                    current_mode = synced
+                    last_synced_mode = synced
+                    mode_display = get_mode_name(synced)
+                    print(f"[MODE SYNC] Mode changed to: {mode_display} ({synced})")
+                    # Update floating indicator
+                    if indicator:
+                        indicator.update_mode(mode_display)
+                    # Update tray
+                    if tray:
+                        tray.set_mode(synced)
+            except Exception as e:
+                print(f"[MODE SYNC] Error: {e}")
+            time.sleep(0.5)
+    
+    sync_thread = threading.Thread(target=mode_sync_watcher, daemon=True)
+    sync_thread.start()
+    print("🔄 Mode sync watcher started")
     
     # Start audio stream
     with sd.InputStream(samplerate=SAMPLE_RATE, channels=CHANNELS, callback=callback):

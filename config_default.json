@@ -1,0 +1,179 @@
+{
+    "version": "2.3.0",
+    "api": {
+        "key": "",
+        "gemini_key": "",
+        "deepl_key": "",
+        "provider": "groq",
+        "model": "whisper-large-v3"
+    },
+    "input": {
+        "mode": "toggle",
+        "hotkey": "ctrl r"
+    },
+    "global": {
+        "save_audio": false,
+        "max_duration": 180,
+        "transcription_provider": "groq",
+        "default_mode": "ai",
+        "active_mode": "ai"
+    },
+    "modes": {
+        "ai": {
+            "name": "AI Chat",
+            "prompt": "AI assistant prompts. Mixed language with technical terms. Prompt engineering, context engineering.",
+            "profanity_filter": false,
+            "filler_cleanup": true,
+            "hallucination_filter": true,
+            "temperature": 0,
+            "language": "auto",
+            "transcription_provider": "groq",
+            "transcription_model": "whisper-large-v3",
+            "auto_translate": "off",
+            "translate_lang": "EN",
+            "translate_engine": "groq",
+            "filler_words": [
+                "um",
+                "uh",
+                "like",
+                "эм",
+                "ээ",
+                "ну",
+                "типа"
+            ],
+            "garbage_phrases": [
+                "Продолжение следует",
+                "To be continued",
+                "Thank you for watching",
+                "Спасибо за просмотр",
+                "Подписывайтесь на канал",
+                "Subscribe",
+                "Subtitles by",
+                "[Music]",
+                "[Музыка]",
+                "(music)",
+                "(музыка)",
+                "Редактор субтитров",
+                "Корректор"
+            ]
+        },
+        "code": {
+            "name": "Code",
+            "prompt": "Programming, Python, API, Docker, architecture. Technical context.",
+            "profanity_filter": true,
+            "filler_cleanup": true,
+            "hallucination_filter": true,
+            "temperature": 0,
+            "language": "ru",
+            "transcription_provider": "groq",
+            "transcription_model": "whisper-large-v3",
+            "auto_translate": "off",
+            "translate_lang": "EN",
+            "translate_engine": "groq",
+            "filler_words": [
+                "um",
+                "uh",
+                "like"
+            ],
+            "garbage_phrases": [
+                "Продолжение следует",
+                "To be continued",
+                "Thank you for watching",
+                "Subscribe",
+                "Subtitles by",
+                "[Music]",
+                "(music)"
+            ]
+        },
+        "docs": {
+            "name": "Docs",
+            "prompt": "Technical documentation, specifications. Formal language.",
+            "profanity_filter": false,
+            "filler_cleanup": true,
+            "hallucination_filter": true,
+            "temperature": 0,
+            "language": "ru",
+            "transcription_provider": "groq",
+            "transcription_model": "whisper-large-v3",
+            "auto_translate": "off",
+            "translate_lang": "EN",
+            "translate_engine": "groq",
+            "filler_words": [
+                "um",
+                "uh",
+                "like",
+                "эм",
+                "ээ"
+            ],
+            "garbage_phrases": [
+                "Продолжение следует",
+                "To be continued",
+                "Thank you for watching",
+                "Subscribe",
+                "Subtitles by",
+                "[Music]",
+                "(music)"
+            ]
+        },
+        "notes": {
+            "name": "Notes",
+            "prompt": "Notes, thoughts, ideas. Structure as bullet points if appropriate.",
+            "profanity_filter": false,
+            "filler_cleanup": true,
+            "hallucination_filter": true,
+            "temperature": 0,
+            "language": "ru",
+            "transcription_provider": "groq",
+            "transcription_model": "whisper-large-v3",
+            "auto_translate": "append",
+            "translate_lang": "EN",
+            "translate_engine": "groq",
+            "filler_words": [
+                "um",
+                "uh",
+                "like",
+                "эм",
+                "ээ",
+                "ну"
+            ],
+            "garbage_phrases": [
+                "Продолжение следует",
+                "To be continued",
+                "Thank you for watching",
+                "Subscribe",
+                "Subtitles by",
+                "[Music]",
+                "(music)"
+            ]
+        },
+        "chat": {
+            "name": "Chat",
+            "prompt": "Free conversation, casual speech.",
+            "profanity_filter": false,
+            "filler_cleanup": false,
+            "hallucination_filter": true,
+            "temperature": 0,
+            "language": "auto",
+            "transcription_provider": "groq",
+            "transcription_model": "whisper-large-v3",
+            "auto_translate": "off",
+            "translate_lang": "EN",
+            "translate_engine": "groq",
+            "filler_words": [],
+            "garbage_phrases": [
+                "Продолжение следует",
+                "To be continued",
+                "Thank you for watching",
+                "Subscribe",
+                "Subtitles by",
+                "[Music]",
+                "(music)"
+            ]
+        }
+    },
+    "ui": {
+        "floating_indicator": true,
+        "show_timer": true,
+        "show_mode": true
+    }
+}

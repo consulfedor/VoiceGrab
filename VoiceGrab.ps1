@@ -82,6 +82,7 @@ $HTML = @'
 <!DOCTYPE html>
 <html>
 <head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <meta charset="UTF-8">
 <title>VoiceGrab</title>
 <style>
@@ -93,6 +94,12 @@ body {
     padding: 20px;
     min-height: 100vh;
 }
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: rgba(100,100,150,0.5); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(100,100,150,0.8); }
+html { scrollbar-width: thin; scrollbar-color: rgba(100,100,150,0.5) rgba(0,0,0,0.2); scroll-behavior: smooth; }
 h1 { text-align: center; font-size: 28px; color: #fff; margin-bottom: 5px; }
 .subtitle { text-align: center; color: #888; margin-bottom: 20px; font-size: 14px; }
 .section { 
@@ -227,8 +234,8 @@ input[type=text]:focus {
 select.model-select { padding: 8px 12px; background: rgba(13, 17, 23, 0.8); border: 1px solid rgba(48, 54, 61, 0.8); border-radius: 8px; color: #fff; font-size: 13px; cursor: pointer; min-width: 180px; }
 select.model-select:focus { outline: none; border-color: #4a9eff; }
 select.model-select option { background: #1a1a2e; color: #fff; }
-.mode-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-.mode-tab { flex: 1; padding: 8px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #888; cursor: pointer; font-size: 13px; transition: all 0.2s; text-align: center; min-width: 60px; }
+.mode-tabs { display: flex; margin-bottom: 16px; flex-wrap: wrap; }
+.mode-tab { flex: 1; padding: 8px 12px; margin: 0 5px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #888; cursor: pointer; font-size: 13px; transition: all 0.2s; text-align: center; min-width: 60px; }
 .mode-tab:hover { background: rgba(255,255,255,0.1); color: #fff; }
 .mode-tab.active { background: #4a9eff; border-color: #4a9eff; color: #fff; }
 .mode-form { padding: 12px; background: rgba(255,255,255,0.02); border-radius: 8px; }
@@ -284,11 +291,18 @@ select.lang-select { padding: 6px 10px; background: rgba(13, 17, 23, 0.8); borde
 <h1>VoiceGrab</h1>
 <p class="subtitle">Voice-to-AI Bridge</p>
 
-<div class="section">
-    <button class="btn btn-success btn-large" onclick="runVoiceGrab()">RUN VOICEGRAB</button>
+<div id="sections-wrapper" style="display: flex; flex-direction: column;">
+
+<div class="section" style="order: 1; min-height: 60px;">
+    <div style="display: flex; gap: 6px; align-items: stretch;">
+        <button class="btn btn-success btn-large" onclick="runVoiceGrabKeepOpen()" style="flex: 4; padding: 12px 8px; font-size: 13px;">Run + Settings</button>
+        <button class="btn" onclick="runVoiceGrab()" style="flex: 3; background: linear-gradient(135deg, #27ae60, #2ecc71); padding: 10px 6px; font-size: 11px;">Run + Tray</button>
+        <button class="btn" onclick="openAIStudio()" style="flex: 2; background: linear-gradient(135deg, #f39c12, #e67e22); padding: 8px 4px; font-size: 10px;">Transcribe</button>
+        <button class="btn" onclick="doAction('exitAll')" style="flex: 1; background: linear-gradient(135deg, #c0392b, #e74c3c); padding: 6px 4px; font-size: 9px;">EXIT</button>
+    </div>
 </div>
 
-<div class="section">
+<div class="section" style="order: 4;">
     <div class="section-header collapsible" onclick="toggleApiKey()">
         <span class="section-title" style="margin-bottom:0;">
             <span id="apiToggle" class="toggle-icon">[+]</span>
@@ -297,19 +311,35 @@ select.lang-select { padding: 6px 10px; background: rgba(13, 17, 23, 0.8); borde
         </span>
     </div>
     <div id="apiContent" class="collapsible-content">
-        <p style="color: #888; font-size: 12px; margin-bottom: 12px;">Groq API key for voice transcription. <a href="#" onclick="openLimits(); return false;" style="color: #4a9eff;">View FREE limits</a></p>
+        <p style="color: #888; font-size: 12px; margin-bottom: 12px;"><b>Groq:</b> Voice transcription (Whisper). <a href="#" onclick="openLimits(); return false;" style="color: #4a9eff;">View FREE limits</a></p>
         <div style="margin: 12px 0;">
-            <input type="text" id="apiKey" placeholder="gsk_...">
+            <input type="text" id="apiKey" placeholder="gsk_..." style="width: 280px;">
             <button class="btn btn-small" onclick="saveApiKey()">Save</button>
             <button class="btn btn-small" onclick="getApiKey()">Get Free Key</button>
         </div>
-        <div class="quick-actions">
+        
+        <p style="color: #888; font-size: 12px; margin-bottom: 12px; margin-top: 16px;"><b>Gemini:</b> Alternative API (fallback if Groq limits). <a href="#" onclick="openGeminiLimits(); return false;" style="color: #4a9eff;">Limits</a> | <a href="#" onclick="openAIStudio(); return false;" style="color: #4a9eff;">Batch Transcription</a> <span style="color: #f39c12; font-size: 10px;">(in dev)</span></p>
+        <div style="margin: 12px 0;">
+            <input type="text" id="geminiKey" placeholder="AIza..." style="width: 280px;">
+            <button class="btn btn-small" onclick="saveGeminiKey()">Save</button>
+            <button class="btn btn-small" onclick="getGeminiKey()">Get Free Key</button>
+        </div>
+        
+        <p style="color: #888; font-size: 12px; margin-bottom: 12px; margin-top: 16px;"><b>DeepL:</b> Translation API (500k chars/mo free). <a href="#" onclick="openDeepLLimits(); return false;" style="color: #4a9eff;">Limits</a></p>
+        <div style="margin: 12px 0;">
+            <input type="text" id="deeplKey" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:fx" style="width: 280px;">
+            <button class="btn btn-small" onclick="saveDeepLKey()">Save</button>
+            <button class="btn btn-small" onclick="getDeepLKey()">Get Free Key</button>
+        </div>
+        
+        
+        <div class="quick-actions" style="margin-top: 16px;">
             <button class="btn btn-small" onclick="openConfig()">config.json</button>
         </div>
     </div>
 </div>
 
-<div class="section">
+<div class="section" style="order: 6;">
     <div class="section-header collapsible" onclick="toggleDeps()">
         <span class="section-title" style="margin-bottom:0;">
             <span id="depsToggle" class="toggle-icon">[+]</span>
@@ -323,7 +353,7 @@ select.lang-select { padding: 6px 10px; background: rgba(13, 17, 23, 0.8); borde
         <p style="color: #888; font-size: 12px; margin-bottom: 12px;"><b>Packages:</b> Listed in requirements.txt, installed via pip to user site-packages</p>
         <table class="dep-table">
             <tr><td id="s0" class="st warn">?</td><td class="nm">Python</td><td id="v0" class="vr">...</td><td><button class="btn btn-small" onclick="installPython()">Install</button></td></tr>
-            <tr><td id="s1" class="st warn">?</td><td class="nm">groq</td><td id="v1" class="vr">...</td><td rowspan="9"><button class="btn btn-small" onclick="installDeps()">Install All</button></td></tr>
+            <tr><td id="s1" class="st warn">?</td><td class="nm">groq</td><td id="v1" class="vr">...</td><td rowspan="10"><button class="btn btn-small" onclick="installDeps()">Install All</button></td></tr>
             <tr><td id="s2" class="st warn">?</td><td class="nm">pynput</td><td id="v2" class="vr">...</td></tr>
             <tr><td id="s3" class="st warn">?</td><td class="nm">sounddevice</td><td id="v3" class="vr">...</td></tr>
             <tr><td id="s4" class="st warn">?</td><td class="nm">soundfile</td><td id="v4" class="vr">...</td></tr>
@@ -332,11 +362,12 @@ select.lang-select { padding: 6px 10px; background: rgba(13, 17, 23, 0.8); borde
             <tr><td id="s7" class="st warn">?</td><td class="nm">python-dotenv</td><td id="v7" class="vr">...</td></tr>
             <tr><td id="s8" class="st warn">?</td><td class="nm">pystray</td><td id="v8" class="vr">...</td></tr>
             <tr><td id="s9" class="st warn">?</td><td class="nm">pillow</td><td id="v9" class="vr">...</td></tr>
+            <tr><td id="s10" class="st warn">?</td><td class="nm">google-genai</td><td id="v10" class="vr">...</td></tr>
         </table>
     </div>
 </div>
 
-<div class="section">
+<div class="section" style="order: 5;">
     <div class="section-header collapsible" onclick="toggleSettings()">
         <span class="section-title" style="margin-bottom:0;">
             <span id="settingsToggle" class="toggle-icon">[+]</span>
@@ -368,7 +399,12 @@ select.lang-select { padding: 6px 10px; background: rgba(13, 17, 23, 0.8); borde
         
         <div class="settings-row">
             <div>
-                <div class="setting-label">Paste Hotkey</div>
+                <div class="setting-label">Paste Hotkey
+                    <span class="tooltip">
+                        <span class="help-btn">?</span>
+                        <span class="tooltip-text"><b>Paste Hotkey:</b><br>- Text ALWAYS copied to clipboard<br>- Ctrl+V to paste anywhere<br>- Win+V for emoji, history, symbols</span>
+                    </span>
+                </div>
                 <div class="setting-desc">Text always goes to clipboard!</div>
             </div>
             <div style="text-align: right;">
@@ -473,7 +509,7 @@ select.lang-select { padding: 6px 10px; background: rgba(13, 17, 23, 0.8); borde
     </div>
 </div>
 
-<div class="section">
+<div class="section" style="order: 2;">
     <div class="section-header collapsible" onclick="toggleModes()">
         <span class="section-title" style="margin-bottom:0;">
             <span id="modesToggle" class="toggle-icon">[+]</span>
@@ -481,24 +517,36 @@ select.lang-select { padding: 6px 10px; background: rgba(13, 17, 23, 0.8); borde
         </span>
     </div>
     <div id="modesContent" class="collapsible-content">
-        <p style="color: #888; font-size: 12px; margin-bottom: 12px;">Voice recognition modes with individual settings</p>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <p style="color: #888; font-size: 12px; margin: 0;">Voice recognition modes with individual settings</p>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="color: #888; font-size: 11px;">Startup mode:</span>
+                <select id="defaultModeSelect" class="lang-select" style="min-width: 100px; font-size: 11px;" onchange="saveDefaultMode(this.value)">
+                    <option value="ai">AI Chat</option>
+                    <option value="code">Code</option>
+                    <option value="docs">Docs</option>
+                    <option value="notes">Notes</option>
+                    <option value="chat">Chat</option>
+                </select>
+            </div>
+        </div>
         
         <div class="mode-tabs">
-            <span class="mode-tab active" onclick="selectMode('ai')">AI Chat</span>
-            <span class="mode-tab" onclick="selectMode('code')">Code</span>
-            <span class="mode-tab" onclick="selectMode('docs')">Docs</span>
-            <span class="mode-tab" onclick="selectMode('notes')">Notes</span>
-            <span class="mode-tab" onclick="selectMode('chat')">Chat</span>
+            <span id="tab-ai" class="mode-tab active" onclick="selectMode('ai')" title="">AI Chat</span>
+            <span id="tab-code" class="mode-tab" onclick="selectMode('code')" title="">Code</span>
+            <span id="tab-docs" class="mode-tab" onclick="selectMode('docs')" title="">Docs</span>
+            <span id="tab-notes" class="mode-tab" onclick="selectMode('notes')" title="">Notes</span>
+            <span id="tab-chat" class="mode-tab" onclick="selectMode('chat')" title="">Chat</span>
         </div>
         
         <div class="mode-form" id="modeForm">
-            <!-- Mode Name (only visible for custom mode) -->
-            <div class="settings-row" id="modeNameRow" style="display: none;">
+            <!-- Mode Name (short name shown on tab) -->
+            <div class="settings-row" id="modeNameRow">
                 <div>
                     <div class="setting-label">Mode Name</div>
-                    <div class="setting-desc">Custom name for this mode</div>
+                    <div class="setting-desc">Short name for tab button</div>
                 </div>
-                <input type="text" id="modeName" class="input-field" style="width: 120px;" onchange="saveModeField('name', this.value)">
+                <input type="text" id="modeName" class="input-field" style="width: 120px;" onchange="saveModeField('name', this.value); updateTabName()">
             </div>
             
             <!-- Hotkey is now GLOBAL in Settings section, not per-mode -->
@@ -544,6 +592,7 @@ select.lang-select { padding: 6px 10px; background: rgba(13, 17, 23, 0.8); borde
                     <option value="id">Indonesian</option>
                     <option value="it">Italian</option>
                     <option value="ja">Japanese</option>
+                    <option value="tr">Turkish</option>
                     <option value="kn">Kannada</option>
                     <option value="kk">Kazakh</option>
                     <option value="ko">Korean</option>
@@ -577,23 +626,7 @@ select.lang-select { padding: 6px 10px; background: rgba(13, 17, 23, 0.8); borde
                 </select>
             </div>
             
-            <div class="settings-row">
-                <div>
-                    <div class="setting-label">
-                        Model
-                        <span class="tooltip">
-                            <span class="help-btn">?</span>
-                            <span class="tooltip-text"><b>Whisper Model:</b><br>- <b>Accuracy:</b> whisper-large-v3 (slower, precise)<br>- <b>Speed:</b> whisper-large-v3-turbo (faster)<br><br><b>++ SEPARATE LIMITS!</b> Each model has its own rate limit. If one runs out, switch to other!</span>
-                        </span>
-                    </div>
-                    <div class="setting-desc">Accuracy vs Speed</div>
-                </div>
-                <select id="modeModel" class="lang-select" onchange="saveModeField('model', this.value)">
-                    <option value="whisper-large-v3">Accuracy</option>
-                    <option value="whisper-large-v3-turbo">Speed</option>
-                </select>
-            </div>
-            
+
             <div class="settings-row">
                 <div>
                     <div class="setting-label">
@@ -639,7 +672,7 @@ select.lang-select { padding: 6px 10px; background: rgba(13, 17, 23, 0.8); borde
                     </span>
                 </div>
                 <div class="setting-desc" style="margin-bottom: 8px;">Context hint for Whisper | <a href="action:openUrl:https://console.groq.com/docs/speech-text" style="color:#58a6ff;text-decoration:underline;">GROQ Whisper Docs</a></div>
-                <textarea class="prompt-input" id="modePrompt" onchange="saveModeField('prompt', this.value)">AI assistant prompts. Mixed language with technical terms.</textarea>
+                <textarea class="prompt-input" id="modePrompt" onchange="saveModeField('prompt', this.value)" placeholder="Loaded from config..."></textarea>
             </div>
             
             <div class="settings-row">
@@ -661,7 +694,7 @@ select.lang-select { padding: 6px 10px; background: rgba(13, 17, 23, 0.8); borde
             
             <div style="margin-bottom: 12px;" id="fillerWordsContainer">
                 <div class="setting-desc" style="margin-bottom: 8px;">Words to remove (comma separated):</div>
-                <textarea class="prompt-input" id="modeFillerWords" rows="2" onchange="saveModeField('filler_words', this.value)">um, uh, like, you know</textarea>
+                <textarea class="prompt-input" id="modeFillerWords" rows="2" onchange="saveModeField('filler_words', this.value)" placeholder="um, uh, like..."></textarea>
             </div>
             
             <div class="settings-row">
@@ -683,7 +716,74 @@ select.lang-select { padding: 6px 10px; background: rgba(13, 17, 23, 0.8); borde
             
             <div style="margin-bottom: 12px;" id="garbagePhrasesContainer">
                 <div class="setting-desc" style="margin-bottom: 8px;">Phrases to remove (comma separated):</div>
-                <textarea class="prompt-input" id="modeGarbagePhrases" rows="4" onchange="saveModeField('garbage_phrases', this.value)">&#1055;&#1088;&#1086;&#1076;&#1086;&#1083;&#1078;&#1077;&#1085;&#1080;&#1077; &#1089;&#1083;&#1077;&#1076;&#1091;&#1077;&#1090;, To be continued, Thank you for watching, &#1057;&#1087;&#1072;&#1089;&#1080;&#1073;&#1086; &#1079;&#1072; &#1087;&#1088;&#1086;&#1089;&#1084;&#1086;&#1090;&#1088;, &#1055;&#1086;&#1076;&#1087;&#1080;&#1089;&#1099;&#1074;&#1072;&#1081;&#1090;&#1077;&#1089;&#1100; &#1085;&#1072; &#1082;&#1072;&#1085;&#1072;&#1083;, Subscribe, Subtitles by, [Music], [&#1052;&#1091;&#1079;&#1099;&#1082;&#1072;], (music), (&#1084;&#1091;&#1079;&#1099;&#1082;&#1072;), &#1056;&#1077;&#1076;&#1072;&#1082;&#1090;&#1086;&#1088; &#1089;&#1091;&#1073;&#1090;&#1080;&#1090;&#1088;&#1086;&#1074;, &#1050;&#1086;&#1088;&#1088;&#1077;&#1082;&#1090;&#1086;&#1088;</textarea>
+                <textarea class="prompt-input" id="modeGarbagePhrases" rows="4" onchange="saveModeField('garbage_phrases', this.value)" placeholder="Loaded from config..."></textarea>
+            </div>
+            
+            <div class="settings-divider"></div>
+            <div class="settings-subtitle">API Settings</div>
+            
+            <div class="settings-row" style="margin-bottom: 12px;">
+                <div>
+                    <div class="setting-label">
+                        Transcription
+                        <span class="tooltip">
+                            <span class="help-btn">?</span>
+                            <span class="tooltip-text"><b>Transcription:</b><br>Provider and model for voice recognition.<br>Groq = Whisper (fast)<br>Gemini = Multimodal AI</span>
+                        </span>
+                    </div>
+                    <div class="setting-desc">Voice recognition provider and model</div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <select id="modeTranscriptionProvider" class="lang-select" style="min-width: 80px;" onchange="updateTranscriptionModels(); saveModeField('transcription_provider', this.value)">
+                        <option value="groq">Groq</option>
+                        <option value="gemini">Gemini</option>
+                    </select>
+                    <select id="modeTranscriptionModel" class="lang-select" style="min-width: 150px;" onchange="saveModeField('transcription_model', this.value)">
+                        <option value="whisper-large-v3">Large v3 (Accurate)</option>
+                        <option value="distil-whisper-large-v3-en">Distil v3 EN (Fast)</option>
+                        <option value="whisper-large-v3-turbo">Large v3 Turbo</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="settings-row" style="margin-bottom: 12px;">
+                <div>
+                    <div class="setting-label">
+                        Auto-Translate
+                        <span class="tooltip">
+                            <span class="help-btn">?</span>
+                            <span class="tooltip-text"><b>Auto-Translate:</b><br>OFF = no translation<br>Replace = only translation<br>Append = Original [EN: Translation]</span>
+                        </span>
+                    </div>
+                    <div class="setting-desc">Translate after transcription</div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <select id="modeAutoTranslate" class="lang-select" style="min-width: 90px;" onchange="saveModeField('auto_translate', this.value)">
+                        <option value="off">OFF</option>
+                        <option value="replace">Replace</option>
+                        <option value="append">Append</option>
+                    </select>
+                    <select id="modeTranslateLang" class="lang-select" style="min-width: 60px;" onchange="saveModeField('translate_lang', this.value)">
+                        <option value="EN">EN</option>
+                        <option value="RU">RU</option>
+                        <option value="DE">DE</option>
+                        <option value="FR">FR</option>
+                        <option value="ES">ES</option>
+                        <option value="ZH">ZH</option>
+                        <option value="JA">JA</option>
+                        <option value="TR">TR</option>
+                    </select>
+                    <select id="modeTranslateEngine" class="lang-select" style="min-width: 80px;" onchange="updateTranslationModels(); saveModeField('translate_engine', this.value)">
+                        <option value="groq">Groq</option>
+                        <option value="gemini">Gemini</option>
+                        <option value="deepl">DeepL</option>
+                    </select>
+                    <select id="modeTranslateModel" class="lang-select" style="min-width: 120px;" onchange="saveModeField('translate_model', this.value)">
+                        <option value="llama-3.3-70b-versatile">LLaMA 3.3 70B</option>
+                        <option value="llama-3.1-8b-instant">LLaMA 3.1 8B</option>
+                        <option value="mixtral-8x7b-32768">Mixtral 8x7B</option>
+                    </select>
+                </div>
             </div>
             
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
@@ -693,6 +793,146 @@ select.lang-select { padding: 6px 10px; background: rgba(13, 17, 23, 0.8); borde
         </div>
     </div>
 </div>
+
+<div class="section" style="order: 3;">
+    <div class="section-header collapsible" onclick="toggleTools()">
+        <span class="section-title" style="margin-bottom:0;">
+            <span id="toolsToggle" class="toggle-icon">[+]</span>
+            Tools
+        </span>
+    </div>
+    <div id="toolsContent" class="collapsible-content">
+        <!-- Translator -->
+        <div style="padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+            <div style="color: #fff; font-size: 14px; font-weight: 600; margin-bottom: 8px;">Translator
+                <span class="tooltip">
+                    <span class="help-btn">?</span>
+                    <span class="tooltip-text"><b>Translator:</b><br>- Translate text via AI or DeepL<br>- Second translation for quality check<br>- Copy results to clipboard</span>
+                </span>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <span style="color: #888; font-size: 11px;">Original text:</span>
+                <div style="display: flex; gap: 4px;">
+                    <span onclick="copyOriginal()" style="cursor: pointer; color: #58a6ff; font-size: 11px; font-weight: bold; background: rgba(0,0,0,0.4); padding: 2px 6px; border-radius: 3px;" title="Copy to clipboard">[COPY]</span>
+                    <span onclick="clearField('translateInput')" style="cursor: pointer; color: #e74c3c; font-size: 11px; font-weight: bold; background: rgba(0,0,0,0.4); padding: 2px 6px; border-radius: 3px;" title="Clear this field">[Clear]</span>
+                </div>
+            </div>
+            <div style="margin-bottom: 8px;">
+                <textarea id="translateInput" placeholder="Enter text to translate..." style="width: 100%; height: 80px; resize: vertical; background: #1a1a2e; color: #fff; border: 1px solid #333;"></textarea>
+            </div>
+            
+            <div style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center; flex-wrap: wrap;">
+                <select id="translateLang" class="lang-select" style="min-width: 100px;" onchange="saveToolsSetting('translator_lang', this.value)">
+                    <option value="EN">English</option>
+                    <option value="RU">Russian</option>
+                    <option value="DE">German</option>
+                    <option value="FR">French</option>
+                    <option value="ES">Spanish</option>
+                    <option value="ZH">Chinese</option>
+                    <option value="JA">Japanese</option>
+                    <option value="TR">Turkish</option>
+                </select>
+                <select id="translateDomain" class="lang-select" style="min-width: 100px;" onchange="saveToolsSetting('translator_domain', this.value)">
+                    <option value="auto">Auto (Mode)</option>
+                    <option value="ai">AI Chat</option>
+                    <option value="code">Code</option>
+                    <option value="docs">Docs</option>
+                    <option value="notes">Notes</option>
+                    <option value="chat">Chat</option>
+                </select>
+                <select id="translateEngine" class="lang-select" style="min-width: 120px;" onchange="saveToolsSetting('translator_engine', this.value)">
+                    <option value="groq">Groq AI</option>
+                    <option value="gemini">Gemini AI</option>
+                    <option value="deepl">DeepL</option>
+                </select>
+                <button class="btn" onclick="translateText()" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);">Translate</button>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <span style="color: #888; font-size: 11px;">Translation:</span>
+                <div style="display: flex; gap: 4px;">
+                    <span onclick="copyTranslation()" style="cursor: pointer; color: #58a6ff; font-size: 11px; font-weight: bold; background: rgba(0,0,0,0.4); padding: 2px 6px; border-radius: 3px;" title="Copy to clipboard">[COPY]</span>
+                    <span onclick="clearField('translateOutput')" style="cursor: pointer; color: #e74c3c; font-size: 11px; font-weight: bold; background: rgba(0,0,0,0.4); padding: 2px 6px; border-radius: 3px;" title="Clear this field">[Clear]</span>
+                </div>
+            </div>
+            <div style="margin-bottom: 8px;">
+                <textarea id="translateOutput" placeholder="Translation will appear here..." style="width: 100%; height: 80px; resize: vertical; background: #1a1a2e; color: #fff; border: 1px solid #333;"></textarea>
+            </div>
+            
+            <!-- Second translation settings -->
+            <div style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center; flex-wrap: wrap;">
+                <select id="reverseLang" class="lang-select" style="min-width: 100px;" onchange="saveToolsSetting('reverse_lang', this.value)">
+                    <option value="EN">English</option>
+                    <option value="RU">Russian</option>
+                    <option value="DE">German</option>
+                    <option value="FR">French</option>
+                    <option value="ES">Spanish</option>
+                    <option value="ZH">Chinese</option>
+                    <option value="JA">Japanese</option>
+                    <option value="TR">Turkish</option>
+                </select>
+                <select id="reverseDomain" class="lang-select" style="min-width: 100px;" onchange="saveToolsSetting('reverse_domain', this.value)">
+                    <option value="auto">Auto (Mode)</option>
+                    <option value="ai">AI Chat</option>
+                    <option value="code">Code</option>
+                    <option value="docs">Docs</option>
+                    <option value="notes">Notes</option>
+                    <option value="chat">Chat</option>
+                </select>
+                <select id="reverseEngine" class="lang-select" style="min-width: 120px;" onchange="saveToolsSetting('reverse_engine', this.value)">
+                    <option value="groq">Groq AI</option>
+                    <option value="gemini">Gemini AI</option>
+                    <option value="deepl">DeepL</option>
+                </select>
+                <button class="btn" onclick="reverseTranslate()" style="background: linear-gradient(135deg, #3498db, #2980b9);">Translate</button>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <span style="color: #888; font-size: 11px;">Second translation:</span>
+                <div style="display: flex; gap: 4px;">
+                    <span onclick="copyReverse()" style="cursor: pointer; color: #58a6ff; font-size: 11px; font-weight: bold; background: rgba(0,0,0,0.4); padding: 2px 6px; border-radius: 3px;" title="Copy to clipboard">[COPY]</span>
+                    <span onclick="clearField('translateReverse')" style="cursor: pointer; color: #e74c3c; font-size: 11px; font-weight: bold; background: rgba(0,0,0,0.4); padding: 2px 6px; border-radius: 3px;" title="Clear this field">[Clear]</span>
+                </div>
+            </div>
+            <div style="margin-bottom: 8px;">
+                <textarea id="translateReverse" placeholder="Second translation will appear here..." style="width: 100%; height: 80px; resize: vertical; background: #1a1a2e; color: #fff; border: 1px solid #333;"></textarea>
+            </div>
+            
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button class="btn btn-small" onclick="clearTranslator()" style="background: #c0392b;">Clear All</button>
+                <button class="btn btn-small" onclick="copyAllTranslations()" style="background: #27ae60;">Copy All</button>
+                <div id="translateStatus" style="color: #27ae60; font-size: 12px; line-height: 28px;"></div>
+            </div>
+        </div>
+        
+        <!-- Document Converter -->
+        <div style="padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px; margin-top: 12px;">
+            <div style="color: #fff; font-size: 14px; font-weight: 600; margin-bottom: 8px;">Document Converter
+                <span class="tooltip">
+                    <span class="help-btn">?</span>
+                    <span class="tooltip-text"><b>Document Converter:</b><br>- Convert MD to DOCX or DOCX to MD<br>- Uses Pandoc (install required)<br>- Preserves formatting</span>
+                </span>
+            </div>
+            <p style="color: #888; font-size: 12px; margin-bottom: 12px;"><a href="#" onclick="openPandocDownload(); return false;" style="color: #4a9eff;">Install Pandoc</a></p>
+            
+            <div style="display: flex; gap: 8px; margin-bottom: 12px; align-items: center;">
+                <input type="text" id="convertFilePath" placeholder="Select MD or DOCX file..." style="flex: 1; min-width: 200px;" readonly>
+                <button class="btn btn-small" onclick="browseFile()">Browse...</button>
+                <button class="btn" onclick="convertFile()" style="background: linear-gradient(135deg, #27ae60, #2ecc71);">Convert</button>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                <input type="checkbox" id="convertSameFolder" checked style="width: 16px; height: 16px;">
+                <label for="convertSameFolder" style="color: #888; font-size: 12px; cursor: pointer;">Save next to source file (uncheck to choose folder)</label>
+            </div>
+            
+            <div id="convertStatus" style="color: #27ae60; font-size: 12px; min-height: 20px;"></div>
+        </div>
+    </div>
+</div>
+
+</div> <!-- end sections-wrapper -->
 
 <input type="hidden" id="modeDataJson" value="">
 <div class="log-area" id="logArea">Ready to check dependencies...</div>
@@ -746,6 +986,40 @@ function toggleApiKey() {
     }
 }
 
+function toggleTools() {
+    var content = document.getElementById('toolsContent');
+    var toggle = document.getElementById('toolsToggle');
+    if (content.className.indexOf('expanded') >= 0) {
+        content.className = 'collapsible-content';
+        toggle.innerText = '[+]';
+    } else {
+        content.className = 'collapsible-content expanded';
+        toggle.innerText = '[-]';
+    }
+}
+
+// DocConverter functions
+function browseFile() { doAction('browseConvertFile'); }
+function convertFile() { 
+    var filePath = document.getElementById('convertFilePath').value;
+    var sameFolder = document.getElementById('convertSameFolder').checked;
+    if (!filePath) {
+        setConvertStatus('Please select a file first', 'error');
+        return;
+    }
+    setConvertStatus('Converting...', 'working');
+    doAction('convertFile:' + (sameFolder ? 'same' : 'choose') + ':' + filePath); 
+}
+function openPandocDownload() { doAction('pandocDownload'); }
+function setConvertStatus(msg, type) {
+    var el = document.getElementById('convertStatus');
+    if (type === 'error') el.style.color = '#e74c3c';
+    else if (type === 'success') el.style.color = '#27ae60';
+    else if (type === 'working') el.style.color = '#f39c12';
+    else el.style.color = '#888';
+    el.innerText = msg;
+}
+
 function log(msg) {
     var el = document.getElementById('logArea');
     el.innerHTML = el.innerHTML + msg + '<br>';
@@ -759,11 +1033,126 @@ function doAction(action) {
 }
 
 function runVoiceGrab() { doAction('run'); }
+function runVoiceGrabKeepOpen() { doAction('runKeepOpen'); }
 function saveApiKey() { 
     var key = document.getElementById('apiKey').value;
     doAction('saveKey:' + key); 
 }
 function getApiKey() { doAction('getKey'); }
+function saveGeminiKey() { 
+    var key = document.getElementById('geminiKey').value;
+    doAction('saveGeminiKey:' + key); 
+}
+function getGeminiKey() { doAction('getGeminiKey'); }
+function openGeminiLimits() { doAction('geminiLimits'); }
+function openAIStudio() { doAction('aiStudio'); }
+// DeepL API functions
+function saveDeepLKey() { 
+    var key = document.getElementById('deeplKey').value;
+    doAction('saveDeepLKey:' + key); 
+}
+function getDeepLKey() { doAction('getDeepLKey'); }
+function openDeepLLimits() { doAction('deeplLimits'); }
+// Translator functions
+function pasteToTranslate() { doAction('pasteToTranslate'); }
+function translateText() {
+    var text = document.getElementById('translateInput').value;
+    var lang = document.getElementById('translateLang').value;
+    var engine = document.getElementById('translateEngine').value;
+    if (!text) {
+        setTranslateStatus('Enter text to translate', 'error');
+        return;
+    }
+    var domain = document.getElementById('translateDomain').value;
+    setTranslateStatus('Translating...', 'working');
+    doAction('translate:' + engine + ':' + lang + ':' + domain + ':' + encodeURIComponent(text));
+}
+function copyTranslation() {
+    var el = document.getElementById('translateOutput');
+    var text = el.innerText || el.value;
+    if (text) {
+        doAction('copyTranslation:' + encodeURIComponent(text));
+    }
+}
+function reverseTranslate() {
+    var el = document.getElementById('translateOutput');
+    var text = el.innerText || el.value;
+    var lang = document.getElementById('reverseLang').value;
+    var engine = document.getElementById('reverseEngine').value;
+    var domain = document.getElementById('reverseDomain').value;
+    if (!text) {
+        setTranslateStatus('No text to translate', 'error');
+        return;
+    }
+    setTranslateStatus('Second translation...', 'working');
+    doAction('reverseTranslate:' + engine + ':' + lang + ':' + domain + ':' + encodeURIComponent(text));
+}
+function setTranslateStatus(msg, type) {
+    var el = document.getElementById('translateStatus');
+    if (type === 'error') el.style.color = '#e74c3c';
+    else if (type === 'success') el.style.color = '#27ae60';
+    else if (type === 'working') el.style.color = '#f39c12';
+    else el.style.color = '#888';
+    el.innerText = msg;
+}
+function copyOriginal() {
+    var text = document.getElementById('translateInput').value;
+    if (text) {
+        doAction('copyTranslation:' + encodeURIComponent(text));
+        setTranslateStatus('Original copied!', 'success');
+    }
+}
+function clearTranslator() {
+    clearField('translateInput');
+    clearField('translateOutput');
+    clearField('translateReverse');
+    setTranslateStatus('All cleared', 'success');
+}
+function copyAllTranslations() {
+    var orig = document.getElementById('translateInput').value || '';
+    var trans = document.getElementById('translateOutput').value || '';
+    var rev = document.getElementById('translateReverse').value || '';
+    var all = '';
+    if (orig) all += 'Original: ' + orig + '\n';
+    if (trans) all += 'Translation: ' + trans + '\n';
+    if (rev) all += 'Second: ' + rev;
+    doAction('copyText:' + encodeURIComponent(all.trim()));
+    setTranslateStatus('All copied!', 'success');
+}
+function clearField(id) {
+    var el = document.getElementById(id);
+    if (el) {
+        el.value = '';
+        el.innerText = '';
+    }
+}
+function setFieldValue(id, text) {
+    var el = document.getElementById(id);
+    if (el) {
+        el.value = text;
+        el.innerText = text;
+    }
+}
+function copyReverse() {
+    var el = document.getElementById('translateReverse');
+    var text = el.innerText || el.value;
+    if (text) {
+        doAction('copyTranslation:' + encodeURIComponent(text));
+        setTranslateStatus('Reverse copied!', 'success');
+    }
+}
+function saveProvider(provider) { 
+    doAction('saveProvider:' + provider);
+    showSaved();
+}
+function saveGeminiModel(model) { 
+    doAction('saveGeminiModel:' + model);
+    showSaved();
+}
+function saveGroqModel(model) { 
+    doAction('saveGroqModel:' + model);
+    showSaved();
+}
 function openConfig() { doAction('config'); }
 function openRecordings() { doAction('recordings'); }
 function openLogs() { doAction('logs'); }
@@ -827,6 +1216,7 @@ function saveGlobalSettings() {
 
 // ============ Modes Functions ============
 var currentMode = 'ai';
+var selectModeTimerId = null; // Debounce timer for fast tab switching
 
 function toggleModes() {
     var content = document.getElementById('modesContent');
@@ -860,24 +1250,34 @@ function toggleModes() {
 }
 
 function selectMode(mode) {
+    // Cancel previous pending update if user switched tabs quickly
+    if (selectModeTimerId) {
+        clearTimeout(selectModeTimerId);
+        selectModeTimerId = null;
+    }
+    
     currentMode = mode;
     // Update tab styles
     var tabs = document.getElementsByClassName('mode-tab');
     for (var i = 0; i < tabs.length; i++) {
         tabs[i].className = 'mode-tab';
     }
-    event.target.className = 'mode-tab active';
-    // Load mode data from PowerShell
-    doAction('loadMode:' + mode);
+    var clickedTab = document.getElementById('tab-' + mode);
+    if (clickedTab) clickedTab.className = 'mode-tab active';
     
-    // Show/hide Mode Name field (only for 'chat' mode which is customizable)
-    var modeNameRow = document.getElementById('modeNameRow');
-    if (modeNameRow) {
-        modeNameRow.style.display = (mode === 'chat') ? 'flex' : 'none';
-    }
+    // Small delay before loading to ensure any pending saves complete
+    setTimeout(function() {
+        // Load mode data from PowerShell
+        doAction('loadMode:' + mode);
+        // Sync active mode with Python (write to file)
+        doAction('setActiveMode:' + mode);
+    }, 150);
+    
+    // Mode Name is now always visible for all modes
     
     // Update checkboxes after loadMode (via hidden data) - need delay for PS1 to finish
-    setTimeout(function() {
+    // Use debounce timer so rapid switches cancel previous updates
+    selectModeTimerId = setTimeout(function() {
         var dataEl = document.getElementById('modeDataJson');
         if (dataEl && dataEl.value) {
             try {
@@ -901,6 +1301,50 @@ function selectMode(mode) {
                 if (langEl && data.language) {
                     langEl.value = data.language;
                 }
+                // Load auto-translate settings
+                var autoTransEl = document.getElementById('modeAutoTranslate');
+                if (autoTransEl) {
+                    autoTransEl.value = data.auto_translate || 'off';
+                }
+                var transLangEl = document.getElementById('modeTranslateLang');
+                if (transLangEl) {
+                    transLangEl.value = data.translate_lang || 'EN';
+                }
+                var transEngineEl = document.getElementById('modeTranslateEngine');
+                if (transEngineEl) {
+                    transEngineEl.value = data.translate_engine || 'groq';
+                }
+                // Load translation model
+                var transModelEl = document.getElementById('modeTranslateModel');
+                if (transModelEl) {
+                    // First update dropdown options based on engine
+                    updateTranslationModels();
+                    // Then set the value (after dropdown is populated)
+                    setTimeout(function() {
+                        transModelEl.value = data.translate_model || getDefaultTranslationModel(data.translate_engine || 'groq');
+                    }, 50);
+                }
+                // Load transcription provider and model
+                var transcProviderEl = document.getElementById('modeTranscriptionProvider');
+                if (transcProviderEl) {
+                    transcProviderEl.value = data.transcription_provider || 'groq';
+                }
+                var transcModelEl = document.getElementById('modeTranscriptionModel');
+                if (transcModelEl) {
+                    // First update dropdown options based on provider
+                    updateTranscriptionModels();
+                    // Then set the value (after dropdown is populated)
+                    setTimeout(function() {
+                        transcModelEl.value = data.transcription_model || data.model || 'whisper-large-v3';
+                    }, 50);
+                }
+                // Load prompt
+                var promptEl = document.getElementById('modePrompt');
+                if (promptEl && data.prompt) {
+                    promptEl.value = data.prompt;
+                }
+                // Update tab title with settings summary
+                updateModeTabTitle(mode, data);
             } catch(e) { log('DEBUG parse error: ' + e); }
         } else {
             log('DEBUG modeDataJson NOT FOUND or empty');
@@ -909,8 +1353,59 @@ function selectMode(mode) {
     log('Mode selected: ' + mode);
 }
 
+function updateModeTabTitle(mode, data) {
+    var tab = document.getElementById('tab-' + mode);
+    if (!tab) return;
+    
+    // Build settings summary for tooltip
+    // Format: Lang @TranscriptionAPI | Translate: Mode→TargetLang @Engine
+    var lang = (data.language || 'ru').toUpperCase();
+    var autoTrans = data.auto_translate || 'off';
+    var transLang = data.translate_lang || 'EN';
+    var transEngine = data.translate_engine || 'groq';
+    var transcProvider = data.transcription_provider || 'groq';
+    
+    var providerShort = {groq: 'Groq', gemini: 'Gemini'}[transcProvider] || transcProvider;
+    var engineShort = {groq: 'Groq', gemini: 'Gemini', deepl: 'DeepL'}[transEngine] || transEngine;
+    var transMode = {off: 'OFF', on: 'ON', append: 'Append'}[autoTrans] || autoTrans;
+    
+    var title = lang + ' @' + providerShort;
+    if (autoTrans !== 'off') {
+        title += ' | ' + transMode + '→' + transLang + ' @' + engineShort;
+    }
+    
+    tab.title = title;
+    
+    // Also update tab text with custom name if available
+    if (data.name) {
+        tab.innerText = data.name;
+    }
+}
+
+function updateTabName() {
+    var tab = document.getElementById('tab-' + currentMode);
+    var nameEl = document.getElementById('modeName');
+    if (tab && nameEl && nameEl.value) {
+        tab.innerText = nameEl.value;
+        // Also update Startup mode dropdown option text
+        var select = document.getElementById('defaultModeSelect');
+        if (select) {
+            for (var i = 0; i < select.options.length; i++) {
+                if (select.options[i].value === currentMode) {
+                    select.options[i].text = nameEl.value;
+                    break;
+                }
+            }
+        }
+    }
+}
+
 function updateTemp(val) {
     document.getElementById('tempValue').innerText = (val / 10).toFixed(1);
+}
+
+function saveToolsSetting(field, value) {
+    doAction('saveToolsSetting:' + field + ':' + encodeURIComponent(value));
 }
 
 function saveLang(lang) {
@@ -926,14 +1421,110 @@ function saveModeField(field, value) {
     } else if (typeof value === 'string') {
         encoded = encodeURIComponent(value);
     }
+    // Debug: log what we're saving
+    log('saveModeField: mode=' + currentMode + ', field=' + field + ', valueLen=' + (value ? value.length : 0));
     doAction('saveMode:' + currentMode + ':' + field + ':' + encoded);
     showSaved();
+}
+
+// Model definitions for dynamic dropdowns
+var TRANSCRIPTION_MODELS = {
+    groq: [
+        {value: 'whisper-large-v3', label: 'Large v3 (Accurate)'},
+        {value: 'distil-whisper-large-v3-en', label: 'Distil v3 EN (Fast)'},
+        {value: 'whisper-large-v3-turbo', label: 'Large v3 Turbo'}
+    ],
+    gemini: [
+        {value: 'gemini-1.5-flash', label: '1.5 Flash (Fast)'},
+        {value: 'gemini-1.5-pro', label: '1.5 Pro (Accurate)'},
+        {value: 'gemini-2.0-flash', label: '2.0 Flash (Exp)'}
+    ]
+};
+
+var TRANSLATION_MODELS = {
+    groq: [
+        {value: 'llama-3.3-70b-versatile', label: 'LLaMA 3.3 70B'},
+        {value: 'llama-3.1-8b-instant', label: 'LLaMA 3.1 8B (Fast)'},
+        {value: 'mixtral-8x7b-32768', label: 'Mixtral 8x7B'}
+    ],
+    gemini: [
+        {value: 'gemini-1.5-flash', label: '1.5 Flash (Fast)'},
+        {value: 'gemini-1.5-pro', label: '1.5 Pro (Accurate)'},
+        {value: 'gemini-2.0-flash', label: '2.0 Flash (Exp)'}
+    ],
+    deepl: []
+};
+
+function updateTranscriptionModels() {
+    var provider = document.getElementById('modeTranscriptionProvider').value;
+    var modelSelect = document.getElementById('modeTranscriptionModel');
+    var models = TRANSCRIPTION_MODELS[provider] || TRANSCRIPTION_MODELS.groq;
+    
+    // Clear and repopulate
+    modelSelect.innerHTML = '';
+    for (var i = 0; i < models.length; i++) {
+        var opt = models[i];
+        var option = document.createElement('option');
+        option.value = opt.value;
+        option.textContent = opt.label;
+        modelSelect.appendChild(option);
+    }
+    
+    // Always select first model for new provider and save
+    if (models.length > 0) {
+        modelSelect.value = models[0].value;
+        saveModeField('transcription_model', models[0].value);
+    }
+}
+
+function updateTranslationModels() {
+    var engine = document.getElementById('modeTranslateEngine').value;
+    var modelSelect = document.getElementById('modeTranslateModel');
+    
+    if (engine === 'deepl') {
+        modelSelect.style.display = 'none';
+    } else {
+        modelSelect.style.display = '';
+        var models = TRANSLATION_MODELS[engine] || TRANSLATION_MODELS.groq;
+        populateModelSelect(modelSelect, models);
+    }
+}
+
+function populateModelSelect(select, options) {
+    var currentValue = select.value;
+    select.innerHTML = '';
+    for (var i = 0; i < options.length; i++) {
+        var opt = options[i];
+        var option = document.createElement('option');
+        option.value = opt.value;
+        option.textContent = opt.label;
+        select.appendChild(option);
+    }
+    // Restore previous value if it exists in new options
+    for (var j = 0; j < options.length; j++) {
+        if (options[j].value === currentValue) {
+            select.value = currentValue;
+            break;
+        }
+    }
+}
+
+function getDefaultTranslationModel(engine) {
+    if (engine === 'groq') return 'llama-3.3-70b-versatile';
+    if (engine === 'gemini') return 'gemini-1.5-flash';
+    return '';
 }
 
 function saveHotkey(value) {
     doAction('saveHotkey:' + value);
     showSaved();
     log('Hotkey saved: ' + value + ' (restart required)');
+}
+
+function saveDefaultMode(mode) {
+    doAction('saveDefaultMode:' + mode);
+    showSaved();
+    log('Startup mode saved: ' + mode);
 }
 
 function saveInputMode(mode) {
@@ -1267,9 +1858,37 @@ function Show-WebView2Window {
     
     $form = New-Object System.Windows.Forms.Form
     $form.Text = "VoiceGrab"
-    $form.Size = New-Object System.Drawing.Size(900, 800)
+    
+    # Default and minimum sizes
+    $defaultWidth = 850
+    $defaultHeight = 700
+    $minWidth = 800
+    $minHeight = 600
+    
+    # Load saved window size from config (with validation)
+    $config = Get-Config
+    $savedWidth = if ($config.window_width -and $config.window_width -ge $minWidth) { $config.window_width } else { $defaultWidth }
+    $savedHeight = if ($config.window_height -and $config.window_height -ge $minHeight) { $config.window_height } else { $defaultHeight }
+    
+    $form.Width = $savedWidth
+    $form.Height = $savedHeight
+    $form.MinimumSize = New-Object System.Drawing.Size($minWidth, $minHeight)
     $form.StartPosition = "CenterScreen"
     $form.BackColor = [System.Drawing.Color]::FromArgb(26, 26, 46)
+    
+    # Save window size on resize (with debounce)
+    $script:resizeTimer = New-Object System.Windows.Forms.Timer
+    $script:resizeTimer.Interval = 500
+    $script:resizeTimer.Add_Tick({
+            $script:resizeTimer.Stop()
+            if ($form.WindowState -eq [System.Windows.Forms.FormWindowState]::Normal) {
+                $cfg = Get-Config
+                $cfg | Add-Member -NotePropertyName "window_width" -NotePropertyValue $form.Width -Force
+                $cfg | Add-Member -NotePropertyName "window_height" -NotePropertyValue $form.Height -Force
+                Save-Config $cfg
+            }
+        })
+    $form.Add_Resize({ $script:resizeTimer.Stop(); $script:resizeTimer.Start() })
     
     $regPath = "HKCU:\SOFTWARE\Microsoft\Internet Explorer\Main\FeatureControl\FEATURE_BROWSER_EMULATION"
     $appName = [System.IO.Path]::GetFileName([System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName)
@@ -1317,6 +1936,501 @@ function Show-WebView2Window {
                     "getKey" {
                         Start-Process "https://console.groq.com/keys"
                         if ($logEl) { $logEl.InnerHtml += "Opening Groq console...<br>" }
+                    }
+                    "saveGeminiKey:*" {
+                        $key = $action.Substring(14)
+                        if ($key.Length -gt 5) {
+                            $config = Get-Config
+                            if (-not $config.api) { 
+                                $config | Add-Member -NotePropertyName "api" -NotePropertyValue @{} -Force 
+                            }
+                            # Handle both hashtable and PSCustomObject
+                            if ($config.api -is [hashtable]) {
+                                $config.api["gemini_key"] = $key
+                            }
+                            else {
+                                $config.api | Add-Member -NotePropertyName "gemini_key" -NotePropertyValue $key -Force
+                            }
+                            Save-Config $config
+                            if ($logEl) { $logEl.InnerHtml += "Gemini API Key saved!<br>" }
+                        }
+                    }
+                    "getGeminiKey" {
+                        Start-Process "https://aistudio.google.com/apikey"
+                        if ($logEl) { $logEl.InnerHtml += "Opening Google AI Studio...<br>" }
+                    }
+                    "geminiLimits" {
+                        Start-Process "https://ai.google.dev/gemini-api/docs/rate-limits"
+                        if ($logEl) { $logEl.InnerHtml += "Opening Gemini rate limits...<br>" }
+                    }
+                    "aiStudio" {
+                        Start-Process "https://aistudio.google.com/prompts/new_chat"
+                        if ($logEl) { $logEl.InnerHtml += "Opening AI Studio for batch transcription...<br>" }
+                    }
+                    "saveDeepLKey:*" {
+                        $key = $action.Substring(13)
+                        if ($key.Length -gt 5) {
+                            $config = Get-Config
+                            if (-not $config.api) { 
+                                $config | Add-Member -NotePropertyName "api" -NotePropertyValue @{} -Force 
+                            }
+                            if ($config.api -is [hashtable]) {
+                                $config.api["deepl_key"] = $key
+                            }
+                            else {
+                                $config.api | Add-Member -NotePropertyName "deepl_key" -NotePropertyValue $key -Force
+                            }
+                            Save-Config $config
+                            if ($logEl) { $logEl.InnerHtml += "DeepL API Key saved!<br>" }
+                        }
+                    }
+                    "getDeepLKey" {
+                        Start-Process "https://www.deepl.com/pro-api"
+                        if ($logEl) { $logEl.InnerHtml += "Opening DeepL API signup...<br>" }
+                    }
+                    "deeplLimits" {
+                        Start-Process "https://www.deepl.com/docs-api/general/usage"
+                        if ($logEl) { $logEl.InnerHtml += "Opening DeepL usage limits...<br>" }
+                    }
+                    "pasteToTranslate" {
+                        Add-Type -AssemblyName System.Windows.Forms
+                        $clipText = [System.Windows.Forms.Clipboard]::GetText()
+                        if ($clipText) {
+                            $inputEl = $doc.GetElementById("translateInput")
+                            if ($inputEl) { $inputEl.InnerText = $clipText }
+                            if ($logEl) { $logEl.InnerHtml += "Pasted from clipboard<br>" }
+                        }
+                    }
+                    "translate:*" {
+                        $parts = $action.Substring(10).Split(':', 4)
+                        $engine = $parts[0]
+                        $targetLang = $parts[1]
+                        $domain = $parts[2]
+                        $text = [System.Web.HttpUtility]::UrlDecode($parts[3])
+                        
+                        $statusEl = $doc.GetElementById("translateStatus")
+                        $outputEl = $doc.GetElementById("translateOutput")
+                        
+                        # Build domain context for AI
+                        $domainContext = switch ($domain) {
+                            "ai" { "Context: AI assistant conversation." }
+                            "code" { "Use technical/programming terminology. Preserve code formatting." }
+                            "docs" { "Use formal, professional language suitable for documentation." }
+                            "notes" { "Casual notes, preserve meaning." }
+                            "chat" { "Use casual, conversational style for gaming/chat." }
+                            "auto" { "" }  # Will use current Mode later
+                            default { "" }
+                        }
+                        
+                        try {
+                            if ($engine -eq "deepl") {
+                                # DeepL API translation
+                                $config = Get-Config
+                                $deeplKey = $config.api.deepl_key
+                                if (-not $deeplKey) {
+                                    if ($statusEl) { $statusEl.Style = "color: #e74c3c"; $statusEl.InnerText = "DeepL API key not set!" }
+                                    return
+                                }
+                                
+                                $body = @{
+                                    text        = @($text)
+                                    target_lang = $targetLang
+                                } | ConvertTo-Json -Depth 10
+                                
+                                $headers = @{
+                                    "Authorization" = "DeepL-Auth-Key $deeplKey"
+                                    "Content-Type"  = "application/json; charset=utf-8"
+                                }
+                                
+                                $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($body)
+                                $webResponse = Invoke-WebRequest -Uri "https://api-free.deepl.com/v2/translate" -Method Post -Headers $headers -Body $bodyBytes -UseBasicParsing
+                                $responseText = [System.Text.Encoding]::UTF8.GetString($webResponse.RawContentStream.ToArray())
+                                $response = $responseText | ConvertFrom-Json
+                                $translation = $response.translations[0].text
+                                
+                                # Set textarea value via JavaScript
+                                $doc.InvokeScript("setFieldValue", @("translateOutput", $translation))
+                                
+                                if ($statusEl) { $statusEl.InnerText = "Translated via DeepL"; $statusEl.Style = "color: #27ae60" }
+                                if ($logEl) { $logEl.InnerHtml += "DeepL translation complete<br>" }
+                            }
+                            elseif ($engine -eq "gemini") {
+                                # Gemini AI translation
+                                $config = Get-Config
+                                $geminiKey = $config.api.gemini_key
+                                if (-not $geminiKey) {
+                                    if ($statusEl) { $statusEl.Style = "color: #e74c3c"; $statusEl.InnerText = "Gemini API key not set!" }
+                                    return
+                                }
+                                
+                                $langNames = @{EN = "English"; RU = "Russian"; DE = "German"; FR = "French"; ES = "Spanish"; ZH = "Chinese"; JA = "Japanese"; TR = "Turkish" }
+                                $langName = $langNames[$targetLang]
+                                
+                                $contextPrompt = if ($domainContext) { " $domainContext" } else { "" }
+                                
+                                $body = @{
+                                    contents = @(
+                                        @{
+                                            parts = @(
+                                                @{text = "You are a translation machine. Translate to $langName.$contextPrompt Output ONLY the translation, no explanations. Text to translate: $text" }
+                                            )
+                                        }
+                                    )
+                                } | ConvertTo-Json -Depth 10
+                                
+                                # Encode body as UTF-8 bytes for proper character handling
+                                $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($body)
+                                
+                                # Use Invoke-WebRequest for proper UTF-8 response handling
+                                $webResponse = Invoke-WebRequest -Uri "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$geminiKey" -Method Post -ContentType "application/json; charset=utf-8" -Body $bodyBytes -UseBasicParsing
+                                
+                                # Decode response as UTF-8
+                                $responseText = [System.Text.Encoding]::UTF8.GetString($webResponse.RawContentStream.ToArray())
+                                $response = $responseText | ConvertFrom-Json
+                                $translation = $response.candidates[0].content.parts[0].text
+                                
+                                # Set textarea value via JavaScript
+                                $doc.InvokeScript("setFieldValue", @("translateOutput", $translation))
+                                
+                                if ($statusEl) { $statusEl.InnerText = "Translated via Gemini AI"; $statusEl.Style = "color: #27ae60" }
+                                if ($logEl) { $logEl.InnerHtml += "Gemini translation complete<br>" }
+                            }
+                            else {
+                                # Groq AI translation
+                                $config = Get-Config
+                                $groqKey = $config.api.key
+                                if (-not $groqKey) {
+                                    if ($statusEl) { $statusEl.Style = "color: #e74c3c"; $statusEl.InnerText = "Groq API key not set!" }
+                                    return
+                                }
+                                
+                                $langNames = @{EN = "English"; RU = "Russian"; DE = "German"; FR = "French"; ES = "Spanish"; ZH = "Chinese"; JA = "Japanese"; TR = "Turkish" }
+                                $langName = $langNames[$targetLang]
+                                
+                                $contextPrompt = if ($domainContext) { " $domainContext" } else { "" }
+                                
+                                $body = @{
+                                    model       = "llama-3.3-70b-versatile"
+                                    messages    = @(
+                                        @{role = "system"; content = "You are a pure translation machine. Translate the following text to $langName.$contextPrompt IMPORTANT: Output ONLY the direct translation. No explanations, no comments, no 'I am happy to help'. Just translate." }
+                                        @{role = "user"; content = "Translate this: $text" }
+                                    )
+                                    temperature = 0.1
+                                } | ConvertTo-Json -Depth 10
+                                
+                                $headers = @{
+                                    "Authorization" = "Bearer $groqKey"
+                                    "Content-Type"  = "application/json; charset=utf-8"
+                                }
+                                
+                                # Encode body as UTF-8 bytes for proper character handling
+                                $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($body)
+                                
+                                # Use Invoke-WebRequest for proper UTF-8 response handling
+                                $webResponse = Invoke-WebRequest -Uri "https://api.groq.com/openai/v1/chat/completions" -Method Post -Headers $headers -Body $bodyBytes -UseBasicParsing
+                                
+                                # Decode response as UTF-8
+                                $responseText = [System.Text.Encoding]::UTF8.GetString($webResponse.RawContentStream.ToArray())
+                                $response = $responseText | ConvertFrom-Json
+                                $translation = $response.choices[0].message.content
+                                
+                                # Set textarea value via JavaScript
+                                $doc.InvokeScript("setFieldValue", @("translateOutput", $translation))
+                                
+                                if ($statusEl) { $statusEl.InnerText = "Translated via Groq AI"; $statusEl.Style = "color: #27ae60" }
+                                if ($logEl) { $logEl.InnerHtml += "Groq AI translation complete<br>" }
+                            }
+                        }
+                        catch {
+                            if ($statusEl) { $statusEl.Style = "color: #e74c3c"; $statusEl.InnerText = "Error: $($_.Exception.Message)" }
+                            if ($logEl) { $logEl.InnerHtml += "Translation error: $($_.Exception.Message)<br>" }
+                        }
+                    }
+                    "copyTranslation:*" {
+                        $text = [System.Web.HttpUtility]::UrlDecode($action.Substring(16))
+                        Add-Type -AssemblyName System.Windows.Forms
+                        [System.Windows.Forms.Clipboard]::SetText($text)
+                        $statusEl = $doc.GetElementById("translateStatus")
+                        if ($statusEl) { $statusEl.Style = "color: #27ae60"; $statusEl.InnerText = "Copied to clipboard!" }
+                        if ($logEl) { $logEl.InnerHtml += "Translation copied<br>" }
+                    }
+                    "reverseTranslate:*" {
+                        $parts = $action.Substring(17).Split(':', 4)
+                        $engine = $parts[0]
+                        $targetLang = $parts[1]  # Source language to translate back to
+                        $domain = $parts[2]
+                        $text = [System.Web.HttpUtility]::UrlDecode($parts[3])
+                        
+                        $statusEl = $doc.GetElementById("translateStatus")
+                        $reverseEl = $doc.GetElementById("translateReverse")
+                        
+                        $langNames = @{EN = "English"; RU = "Russian"; DE = "German"; FR = "French"; ES = "Spanish"; ZH = "Chinese"; JA = "Japanese"; TR = "Turkish" }
+                        $langName = $langNames[$targetLang]
+                        
+                        try {
+                            $config = Get-Config
+                            
+                            if ($engine -eq "deepl") {
+                                # DeepL API translation
+                                $deeplKey = $config.api.deepl_key
+                                if (-not $deeplKey) {
+                                    if ($statusEl) { $statusEl.Style = "color: #e74c3c"; $statusEl.InnerText = "DeepL API key not set!" }
+                                    return
+                                }
+                                
+                                $body = @{
+                                    text        = @($text)
+                                    target_lang = $targetLang
+                                } | ConvertTo-Json -Depth 10
+                                
+                                $headers = @{
+                                    "Authorization" = "DeepL-Auth-Key $deeplKey"
+                                    "Content-Type"  = "application/json; charset=utf-8"
+                                }
+                                
+                                $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($body)
+                                $webResponse = Invoke-WebRequest -Uri "https://api-free.deepl.com/v2/translate" -Method Post -Headers $headers -Body $bodyBytes -UseBasicParsing
+                                $responseText = [System.Text.Encoding]::UTF8.GetString($webResponse.RawContentStream.ToArray())
+                                $response = $responseText | ConvertFrom-Json
+                                $translation = $response.translations[0].text
+                                
+                                $doc.InvokeScript("setFieldValue", @("translateReverse", $translation))
+                                if ($statusEl) { $statusEl.InnerText = "Second via DeepL"; $statusEl.Style = "color: #27ae60" }
+                            }
+                            elseif ($engine -eq "gemini") {
+                                # Gemini AI translation
+                                $geminiKey = $config.api.gemini_key
+                                if (-not $geminiKey) {
+                                    if ($statusEl) { $statusEl.Style = "color: #e74c3c"; $statusEl.InnerText = "Gemini API key not set!" }
+                                    return
+                                }
+                                
+                                $body = @{
+                                    contents = @(
+                                        @{
+                                            parts = @(
+                                                @{text = "Translate to $langName. Output ONLY the translation: $text" }
+                                            )
+                                        }
+                                    )
+                                } | ConvertTo-Json -Depth 10
+                                
+                                $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($body)
+                                $webResponse = Invoke-WebRequest -Uri "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$geminiKey" -Method Post -ContentType "application/json; charset=utf-8" -Body $bodyBytes -UseBasicParsing
+                                $responseText = [System.Text.Encoding]::UTF8.GetString($webResponse.RawContentStream.ToArray())
+                                $response = $responseText | ConvertFrom-Json
+                                $translation = $response.candidates[0].content.parts[0].text
+                                
+                                $doc.InvokeScript("setFieldValue", @("translateReverse", $translation))
+                                if ($statusEl) { $statusEl.InnerText = "Second via Gemini"; $statusEl.Style = "color: #27ae60" }
+                            }
+                            else {
+                                # Groq AI translation (default)
+                                $groqKey = $config.api.key
+                                if (-not $groqKey) {
+                                    if ($statusEl) { $statusEl.Style = "color: #e74c3c"; $statusEl.InnerText = "Groq API key not set!" }
+                                    return
+                                }
+                                
+                                $body = @{
+                                    model       = "llama-3.3-70b-versatile"
+                                    messages    = @(
+                                        @{role = "system"; content = "Translate to $langName. Output ONLY the translation." }
+                                        @{role = "user"; content = $text }
+                                    )
+                                    temperature = 0.1
+                                } | ConvertTo-Json -Depth 10
+                                
+                                $headers = @{
+                                    "Authorization" = "Bearer $groqKey"
+                                    "Content-Type"  = "application/json; charset=utf-8"
+                                }
+                                
+                                $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($body)
+                                $webResponse = Invoke-WebRequest -Uri "https://api.groq.com/openai/v1/chat/completions" -Method Post -Headers $headers -Body $bodyBytes -UseBasicParsing
+                                $responseText = [System.Text.Encoding]::UTF8.GetString($webResponse.RawContentStream.ToArray())
+                                $response = $responseText | ConvertFrom-Json
+                                $translation = $response.choices[0].message.content
+                                
+                                $doc.InvokeScript("setFieldValue", @("translateReverse", $translation))
+                                if ($statusEl) { $statusEl.InnerText = "Second via Groq"; $statusEl.Style = "color: #27ae60" }
+                            }
+                        }
+                        catch {
+                            if ($statusEl) { $statusEl.Style = "color: #e74c3c"; $statusEl.InnerText = "Error: $($_.Exception.Message)" }
+                        }
+                    }
+                    "saveToolsSetting:*" {
+                        # Save Tools section settings (Translator)
+                        $parts = $action.Substring(17).Split(":")
+                        $field = $parts[0]
+                        $value = [System.Web.HttpUtility]::UrlDecode($parts[1])
+                        $config = Get-Config
+                        if (-not $config.tools) { 
+                            $config | Add-Member -NotePropertyName "tools" -NotePropertyValue @{} -Force 
+                        }
+                        if ($config.tools -is [hashtable]) {
+                            $config.tools[$field] = $value
+                        }
+                        else {
+                            $config.tools | Add-Member -NotePropertyName $field -NotePropertyValue $value -Force
+                        }
+                        Save-Config $config
+                    }
+                    "copyText:*" {
+                        # Copy text to clipboard
+                        $text = [System.Web.HttpUtility]::UrlDecode($action.Substring(9))
+                        [System.Windows.Forms.Clipboard]::SetText($text)
+                    }
+                    "saveProvider:*" {
+                        $provider = $action.Substring(13)
+                        $config = Get-Config
+                        if (-not $config.global) { 
+                            $config | Add-Member -NotePropertyName "global" -NotePropertyValue @{} -Force 
+                        }
+                        if ($config.global -is [hashtable]) {
+                            $config.global["transcription_provider"] = $provider
+                        }
+                        else {
+                            $config.global | Add-Member -NotePropertyName "transcription_provider" -NotePropertyValue $provider -Force
+                        }
+                        Save-Config $config
+                        if ($logEl) { $logEl.InnerHtml += "Provider: $provider<br>" }
+                    }
+                    "saveGeminiModel:*" {
+                        $model = $action.Substring(16)
+                        $config = Get-Config
+                        if (-not $config.api) { 
+                            $config | Add-Member -NotePropertyName "api" -NotePropertyValue @{} -Force 
+                        }
+                        if ($config.api -is [hashtable]) {
+                            $config.api["gemini_model"] = $model
+                        }
+                        else {
+                            $config.api | Add-Member -NotePropertyName "gemini_model" -NotePropertyValue $model -Force
+                        }
+                        Save-Config $config
+                        if ($logEl) { $logEl.InnerHtml += "Gemini Model: $model<br>" }
+                    }
+                    "saveGroqModel:*" {
+                        $model = $action.Substring(14)
+                        $config = Get-Config
+                        if (-not $config.api) { 
+                            $config | Add-Member -NotePropertyName "api" -NotePropertyValue @{} -Force 
+                        }
+                        if ($config.api -is [hashtable]) {
+                            $config.api["model"] = $model
+                        }
+                        else {
+                            $config.api | Add-Member -NotePropertyName "model" -NotePropertyValue $model -Force
+                        }
+                        Save-Config $config
+                        if ($logEl) { $logEl.InnerHtml += "Groq Model: $model<br>" }
+                    }
+                    "browseConvertFile" {
+                        Add-Type -AssemblyName System.Windows.Forms
+                        $dialog = New-Object System.Windows.Forms.OpenFileDialog
+                        $dialog.Filter = "Documents|*.md;*.docx;*.doc|Markdown|*.md|Word|*.docx;*.doc|All Files|*.*"
+                        $dialog.Title = "Select file to convert"
+                        if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+                            $selectedFile = $dialog.FileName
+                            # Use SetAttribute instead of execScript for WebBrowser compatibility
+                            $inputEl = $doc.GetElementById("convertFilePath")
+                            if ($inputEl) { $inputEl.SetAttribute("value", $selectedFile) }
+                            if ($logEl) { $logEl.InnerHtml += "Selected: $selectedFile<br>" }
+                        }
+                    }
+                    "pandocDownload" {
+                        Start-Process "https://pandoc.org/installing.html"
+                        if ($logEl) { $logEl.InnerHtml += "Opening Pandoc download page...<br>" }
+                    }
+                    "convertFile:*" {
+                        $parts = $action.Substring(12).Split(':', 2)
+                        $saveMode = $parts[0]  # 'same' or 'choose'
+                        $inputPath = $parts[1]
+                        
+                        # Check if pandoc installed
+                        $pandocPath = Get-Command "pandoc" -ErrorAction SilentlyContinue
+                        if (-not $pandocPath) {
+                            $statusEl = $doc.GetElementById("convertStatus")
+                            if ($statusEl) { 
+                                $statusEl.Style = "color: #e74c3c"
+                                $statusEl.InnerText = "Pandoc not installed! Click Install Pandoc link." 
+                            }
+                            if ($logEl) { $logEl.InnerHtml += "ERROR: Pandoc not found in PATH<br>" }
+                            return
+                        }
+                        
+                        # Auto-detect direction from extension
+                        $ext = [System.IO.Path]::GetExtension($inputPath).ToLower()
+                        $basePath = [System.IO.Path]::GetDirectoryName($inputPath)
+                        $baseName = [System.IO.Path]::GetFileNameWithoutExtension($inputPath)
+                        
+                        # Determine output extension
+                        if ($ext -eq ".md") { $outExt = ".docx"; $filter = "Word Document|*.docx" }
+                        elseif ($ext -eq ".docx" -or $ext -eq ".doc") { $outExt = ".md"; $filter = "Markdown|*.md" }
+                        else { 
+                            $statusEl = $doc.GetElementById("convertStatus")
+                            if ($statusEl) { 
+                                $statusEl.Style = "color: #e74c3c"
+                                $statusEl.InnerText = "Unsupported file type: $ext (use MD or DOCX)" 
+                            }
+                            return 
+                        }
+                        
+                        # Determine output path
+                        if ($saveMode -eq "choose") {
+                            Add-Type -AssemblyName System.Windows.Forms
+                            $saveDialog = New-Object System.Windows.Forms.SaveFileDialog
+                            $saveDialog.Filter = $filter
+                            $saveDialog.InitialDirectory = $basePath
+                            $saveDialog.FileName = "$baseName$outExt"
+                            $saveDialog.Title = "Save converted file"
+                            if ($saveDialog.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) {
+                                $statusEl = $doc.GetElementById("convertStatus")
+                                if ($statusEl) { $statusEl.InnerText = "Cancelled" }
+                                return
+                            }
+                            $outputPath = $saveDialog.FileName
+                        }
+                        else {
+                            $outputPath = Join-Path $basePath "$baseName$outExt"
+                        }
+                        
+                        # Build command
+                        if ($ext -eq ".md") { 
+                            $cmd = "pandoc `"$inputPath`" -o `"$outputPath`"" 
+                        }
+                        else { 
+                            $cmd = "pandoc `"$inputPath`" -o `"$outputPath`" --extract-media=`"$basePath`"" 
+                        }
+                        
+                        try {
+                            $null = Invoke-Expression $cmd 2>&1
+                            $statusEl = $doc.GetElementById("convertStatus")
+                            if (Test-Path $outputPath) {
+                                if ($statusEl) { 
+                                    $statusEl.Style = "color: #27ae60"
+                                    $statusEl.InnerText = "Done! Saved to: $outputPath" 
+                                }
+                                if ($logEl) { $logEl.InnerHtml += "Converted: $outputPath<br>" }
+                            }
+                            else {
+                                if ($statusEl) { 
+                                    $statusEl.Style = "color: #e74c3c"
+                                    $statusEl.InnerText = "Conversion failed. Check log." 
+                                }
+                                if ($logEl) { $logEl.InnerHtml += "ERROR: Output file not created<br>" }
+                            }
+                        }
+                        catch {
+                            $statusEl = $doc.GetElementById("convertStatus")
+                            if ($statusEl) { 
+                                $statusEl.Style = "color: #e74c3c"
+                                $statusEl.InnerText = "Error: $($_.Exception.Message)" 
+                            }
+                            if ($logEl) { $logEl.InnerHtml += "ERROR: $($_.Exception.Message)<br>" }
+                        }
                     }
                     "config" {
                         if (Test-Path $script:ConfigPath) {
@@ -1394,6 +2508,25 @@ function Show-WebView2Window {
                         Save-Config $config
                         if ($logEl) { $logEl.InnerHtml += "Hotkey: $hotkey (restart to apply)<br>" }
                     }
+                    "saveDefaultMode:*" {
+                        $mode = $action.Substring(16)
+                        $config = Get-Config
+                        if (-not $config.global) { 
+                            $config | Add-Member -NotePropertyName "global" -NotePropertyValue ([PSCustomObject]@{}) -Force 
+                        }
+                        # Use Add-Member for PSCustomObject property
+                        if ($config.global.PSObject.Properties.Match('default_mode').Count) {
+                            $config.global.default_mode = $mode
+                        }
+                        else {
+                            $config.global | Add-Member -NotePropertyName "default_mode" -NotePropertyValue $mode -Force
+                        }
+                        Save-Config $config
+                        # Also write to mode_sync.txt immediately
+                        $syncFile = Join-Path $script:ScriptDir "mode_sync.txt"
+                        [System.IO.File]::WriteAllText($syncFile, $mode, [System.Text.Encoding]::UTF8)
+                        if ($logEl) { $logEl.InnerHtml += "Startup mode saved: $mode<br>" }
+                    }
                     "setting:*" {
                         $parts = $action.Substring(8).Split(":")
                         $key = $parts[0]
@@ -1462,8 +2595,11 @@ function Show-WebView2Window {
                             if (-not $inputMode) { $inputMode = "toggle" }
                             $hotkeyInstruction = if ($inputMode -eq "hold") { "HOLD Right Ctrl to record" } else { "Press Right Ctrl to start/stop" }
                             
-                            # pynput works without admin - run hidden
-                            Start-Process -FilePath $python.cmd -ArgumentList "`"$scriptPath`"" -WorkingDirectory $PSScriptRoot -WindowStyle Hidden
+                            # pynput works without admin - run hidden and save PID
+                            $proc = Start-Process -FilePath $python.cmd -ArgumentList "`"$scriptPath`"" -WorkingDirectory $PSScriptRoot -WindowStyle Hidden -PassThru
+                            # Save PID to file so EXIT can kill only this process
+                            $pidFile = Join-Path $PSScriptRoot "voicegrab.pid"
+                            [System.IO.File]::WriteAllText($pidFile, $proc.Id.ToString())
                             
                             # Show beautiful modal popup
                             $modalEl = $doc.GetElementById("successModal")
@@ -1477,8 +2613,58 @@ function Show-WebView2Window {
                             if ($logEl) { $logEl.InnerHtml += "<span class='err'>ERROR: voicegrab.py not found!</span><br>" }
                         }
                     }
+                    "exitAll" {
+                        # Kill only VoiceGrab Python process using saved PID
+                        if ($logEl) { $logEl.InnerHtml += "Exiting VoiceGrab...<br>" }
+                        try {
+                            $pidFile = Join-Path $script:ScriptDir "voicegrab.pid"
+                            if (Test-Path $pidFile) {
+                                $procId = [int](Get-Content $pidFile -Raw).Trim()
+                                $proc = Get-Process -Id $procId -ErrorAction SilentlyContinue
+                                if ($proc) {
+                                    $proc | Stop-Process -Force -ErrorAction SilentlyContinue
+                                    if ($logEl) { $logEl.InnerHtml += "Killed process $procId<br>" }
+                                }
+                                Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
+                            }
+                            
+                            # Clean up Python bytecode cache to ensure fresh code on next run
+                            $pycache = Join-Path $script:ScriptDir "__pycache__"
+                            if (Test-Path $pycache) {
+                                Remove-Item $pycache -Recurse -Force -ErrorAction SilentlyContinue
+                                if ($logEl) { $logEl.InnerHtml += "Cache cleaned<br>" }
+                            }
+                        }
+                        catch {
+                            if ($logEl) { $logEl.InnerHtml += "Exit error: $($_.Exception.Message)<br>" }
+                        }
+                        Start-Sleep -Milliseconds 300
+                        $form.Close()
+                    }
                     "closeWindow" {
                         $form.Close()
+                    }
+                    "runKeepOpen" {
+                        # Same as 'run' but don't close window and skip modal
+                        $python = Find-Python
+                        if (-not $python) {
+                            if ($logEl) { $logEl.InnerHtml += "<span class='err'>Python not found!</span><br>" }
+                            return
+                        }
+                        $config = Get-Config
+                        $apiKey = $config.api.key
+                        if (-not $apiKey -or $apiKey.Length -lt 10) {
+                            if ($logEl) { $logEl.InnerHtml += "<span class='err'>API Key not set!</span><br>" }
+                            return
+                        }
+                        $scriptPath = Join-Path $PSScriptRoot "voicegrab.py"
+                        if (Test-Path $scriptPath) {
+                            $proc = Start-Process -FilePath $python.cmd -ArgumentList "`"$scriptPath`"" -WorkingDirectory $PSScriptRoot -WindowStyle Hidden -PassThru
+                            # Save PID to file so EXIT can kill only this process
+                            $pidFile = Join-Path $PSScriptRoot "voicegrab.pid"
+                            [System.IO.File]::WriteAllText($pidFile, $proc.Id.ToString())
+                            if ($logEl) { $logEl.InnerHtml += "<b style='color:#27ae60'>VoiceGrab started!</b> Settings window stays open.<br>" }
+                        }
                     }
                     "limits" {
                         Start-Process "https://console.groq.com/settings/limits"
@@ -1556,6 +2742,29 @@ function Show-WebView2Window {
                         try { $doc.parentWindow.eval($jsCode) } catch {}
                         if ($logEl) { $logEl.InnerHtml += "Loaded all mode checkboxes<br>" }
                     }
+                    "setActiveMode:*" {
+                        # Sync selected mode tab with Python - save to config.json AND sync file
+                        $modeName = $action.Substring(14)
+                        
+                        # PRIMARY: Save to config.json global.active_mode
+                        $config = Get-Config
+                        if (-not $config.global) { 
+                            $config | Add-Member -NotePropertyName "global" -NotePropertyValue ([PSCustomObject]@{}) -Force 
+                        }
+                        if ($config.global.PSObject.Properties.Match('active_mode').Count) {
+                            $config.global.active_mode = $modeName
+                        }
+                        else {
+                            $config.global | Add-Member -NotePropertyName "active_mode" -NotePropertyValue $modeName -Force
+                        }
+                        Save-Config $config
+                        
+                        # BACKUP: Also write to mode_sync.txt for backward compat
+                        $syncFile = Join-Path $script:ScriptDir "mode_sync.txt"
+                        [System.IO.File]::WriteAllText($syncFile, $modeName, [System.Text.Encoding]::UTF8)
+                        
+                        if ($logEl) { $logEl.InnerHtml += "Active mode: $modeName<br>" }
+                    }
                     "loadMode:*" {
                         $modeName = $action.Substring(9)
                         $config = Get-Config
@@ -1587,14 +2796,43 @@ function Show-WebView2Window {
                             if ($tempValEl) { $tempValEl.InnerText = $modeData.temperature.ToString("0.0") }
                             # Note: checkboxes are set via JavaScript eval below
                             
-                            if ($promptEl) { $promptEl.InnerText = $modeData.prompt }
+                            # Set prompt via SetAttribute (same method as filler_words which works)
+                            if ($promptEl -and $modeData.prompt) { 
+                                $promptEl.SetAttribute("value", $modeData.prompt)
+                            }
                             if ($fillerEl -and $modeData.filler_words) {
                                 $fillerEl.SetAttribute("value", ($modeData.filler_words -join ", "))
                             }
-                            # Garbage phrases textarea - load saved values
+                            # Garbage phrases textarea - load saved values or use defaults
                             $garbageEl = $doc.GetElementById("modeGarbagePhrases")
-                            if ($garbageEl -and $modeData.garbage_phrases) {
-                                $garbageEl.InnerText = ($modeData.garbage_phrases -join ", ")
+                            if ($garbageEl) {
+                                $garbageValue = $null
+                                if ($modeData.garbage_phrases) {
+                                    $garbageValue = ($modeData.garbage_phrases -join ", ")
+                                }
+                                else {
+                                    # Load defaults from config_default.json
+                                    $defaultCfgPath = Join-Path $script:ScriptDir "config_default.json"
+                                    if (Test-Path $defaultCfgPath) {
+                                        try {
+                                            $defaultCfg = Get-Content $defaultCfgPath -Raw -Encoding UTF8 | ConvertFrom-Json
+                                            $defaultGarbage = $defaultCfg.modes.$modeName.garbage_phrases
+                                            if ($defaultGarbage) {
+                                                $garbageValue = ($defaultGarbage -join ", ")
+                                            }
+                                        }
+                                        catch {
+                                            $garbageValue = "To be continued, Thank you for watching, Subscribe, [Music]"
+                                        }
+                                    }
+                                    else {
+                                        $garbageValue = "To be continued, Thank you for watching, Subscribe, [Music]"
+                                    }
+                                }
+                                if ($garbageValue) {
+                                    # Use SetAttribute (same method as filler_words which works)
+                                    $garbageEl.SetAttribute("value", $garbageValue)
+                                }
                             }
                             
                             # Write checkbox and mode data to hidden input for JavaScript to read
@@ -1604,7 +2842,15 @@ function Show-WebView2Window {
                                 $fillerVal = if ($modeData.filler_cleanup -eq $true) { "true" } else { "false" }
                                 $hallucVal = if ($modeData.hallucination_filter -eq $false) { "false" } else { "true" }
                                 $nameVal = if ($modeData.name) { $modeData.name } else { $modeName }
-                                $jsonData = "{`"profanity_filter`":$profanityVal,`"filler_cleanup`":$fillerVal,`"hallucination_filter`":$hallucVal,`"name`":`"$nameVal`"}"
+                                $autoTransVal = if ($modeData.auto_translate) { $modeData.auto_translate } else { "off" }
+                                $transLangVal = if ($modeData.translate_lang) { $modeData.translate_lang } else { "EN" }
+                                $transEngineVal = if ($modeData.translate_engine) { $modeData.translate_engine } else { "groq" }
+                                $transModelVal = if ($modeData.translate_model) { $modeData.translate_model } else { "llama-3.3-70b-versatile" }
+                                $transcProviderVal = if ($modeData.transcription_provider) { $modeData.transcription_provider } else { "groq" }
+                                $transcModelVal = if ($modeData.transcription_model) { $modeData.transcription_model } elseif ($modeData.model) { $modeData.model } else { "whisper-large-v3" }
+                                $languageVal = if ($modeData.language) { $modeData.language } else { "auto" }
+                                $promptVal = if ($modeData.prompt) { $modeData.prompt -replace '"', '\"' } else { "" }
+                                $jsonData = "{`"profanity_filter`":$profanityVal,`"filler_cleanup`":$fillerVal,`"hallucination_filter`":$hallucVal,`"name`":`"$nameVal`",`"auto_translate`":`"$autoTransVal`",`"translate_lang`":`"$transLangVal`",`"translate_engine`":`"$transEngineVal`",`"translate_model`":`"$transModelVal`",`"transcription_provider`":`"$transcProviderVal`",`"transcription_model`":`"$transcModelVal`",`"language`":`"$languageVal`",`"prompt`":`"$promptVal`"}"
                                 $modeDataJsonEl.SetAttribute("value", $jsonData)
                             }
                             # Input Mode radio buttons
@@ -1639,7 +2885,8 @@ function Show-WebView2Window {
                         $parts = $action.Substring(9).Split(":")
                         $modeName = $parts[0]
                         $field = $parts[1]
-                        $value = [System.Web.HttpUtility]::UrlDecode($parts[2])
+                        # Join remaining parts with ":" to preserve colons in value (e.g., prompts with "Домен:")
+                        $value = [System.Web.HttpUtility]::UrlDecode(($parts[2..($parts.Length - 1)] -join ":"))
                         
                         $config = Get-Config
                         if (-not $config.modes) { $config | Add-Member -NotePropertyName "modes" -NotePropertyValue @{} -Force }
@@ -1662,10 +2909,14 @@ function Show-WebView2Window {
                         }
                         else {
                             $config.modes.$modeName | Add-Member -NotePropertyName $field -NotePropertyValue $value -Force
+                            # Debug: log prompt saves specifically
+                            if ($field -eq "prompt" -and $logEl) {
+                                $logEl.InnerHtml += "DEBUG PROMPT: mode=$modeName, len=$($value.Length), starts='$($value.Substring(0, [Math]::Min(50, $value.Length)))'<br>"
+                            }
                         }
                         
                         Save-Config $config
-                        if ($logEl) { $logEl.InnerHtml += "Mode $modeName.$field saved<br>" }
+                        if ($logEl) { $logEl.InnerHtml += "Mode $modeName.$field saved (len=$($value.Length))<br>" }
                     }
                     "resetMode:*" {
                         $modeName = $action.Substring(10)
@@ -1698,7 +2949,10 @@ function Show-WebView2Window {
                             if ($modeData.profanity_filter) { $profanityEl.SetAttribute("checked", "checked") }
                             else { $profanityEl.RemoveAttribute("checked") }
                         }
-                        if ($promptEl) { $promptEl.InnerText = $modeData.prompt }
+                        # Set prompt via SetAttribute (same method as filler_words which works)
+                        if ($promptEl -and $modeData.prompt) {
+                            $promptEl.SetAttribute("value", $modeData.prompt)
+                        }
                         if ($fillerEl -and $modeData.filler_words) {
                             $fillerEl.SetAttribute("value", ($modeData.filler_words -join ", "))
                         }
@@ -1744,7 +2998,7 @@ function Show-WebView2Window {
                     $logEl = $doc.GetElementById("logArea")
                     if ($logEl) { $logEl.InnerHtml = "Python found: " + $python.version + "<br>" }
                 
-                    $deps = @("groq", "pynput", "sounddevice", "soundfile", "numpy", "pyperclip", "dotenv", "pystray", "PIL")
+                    $deps = @("groq", "pynput", "sounddevice", "soundfile", "numpy", "pyperclip", "dotenv", "pystray", "PIL", "google")
                     $errorCount = 0
                     for ($i = 0; $i -lt $deps.Length; $i++) {
                         $depName = $deps[$i]
@@ -1802,10 +3056,56 @@ function Show-WebView2Window {
                     Set-Status "apiStatus" "OK" "status-badge status-ok"
                 }
                 
-                # Load model selector
+                # Load Gemini key if saved
+                if ($config.api -and $config.api.gemini_key -and $config.api.gemini_key.Length -gt 5) {
+                    $geminiInput = $doc.GetElementById("geminiKey")
+                    if ($geminiInput) { $geminiInput.SetAttribute("value", $config.api.gemini_key) }
+                }
+                
+                # Load DeepL key if saved
+                if ($config.api -and $config.api.deepl_key -and $config.api.deepl_key.Length -gt 5) {
+                    $deeplInput = $doc.GetElementById("deeplKey")
+                    if ($deeplInput) { $deeplInput.SetAttribute("value", $config.api.deepl_key) }
+                }
+                
+                # Load Groq model selector
                 if ($config.api -and $config.api.model) {
-                    $modelSelect = $doc.GetElementById("modelSelect")
-                    if ($modelSelect) { $modelSelect.SetAttribute("value", $config.api.model) }
+                    $groqModelSelect = $doc.GetElementById("groqModelSelect")
+                    if ($groqModelSelect) { $groqModelSelect.SetAttribute("value", $config.api.model) }
+                }
+                
+                # Load transcription provider
+                if ($config.global -and $config.global.transcription_provider) {
+                    $providerSelect = $doc.GetElementById("transcriptionProvider")
+                    if ($providerSelect) { $providerSelect.SetAttribute("value", $config.global.transcription_provider) }
+                }
+                
+                # Load Gemini model
+                if ($config.api -and $config.api.gemini_model) {
+                    $geminiModelSelect = $doc.GetElementById("geminiModel")
+                    if ($geminiModelSelect) { $geminiModelSelect.SetAttribute("value", $config.api.gemini_model) }
+                }
+                
+                # Load Tools settings (Translator)
+                if ($config.tools) {
+                    $fields = @{
+                        "translator_lang"   = "translateLang"
+                        "translator_domain" = "translateDomain"
+                        "translator_engine" = "translateEngine"
+                        "reverse_lang"      = "reverseLang"
+                        "reverse_domain"    = "reverseDomain"
+                        "reverse_engine"    = "reverseEngine"
+                    }
+                    foreach ($key in $fields.Keys) {
+                        $elemId = $fields[$key]
+                        $val = $null
+                        if ($config.tools -is [hashtable]) { $val = $config.tools[$key] }
+                        else { $val = $config.tools.$key }
+                        if ($val) {
+                            # Use JavaScript to set dropdown value reliably
+                            $doc.InvokeScript("eval", @("document.getElementById('$elemId').value = '$val';"))
+                        }
+                    }
                 }
             
                 $inputMode = "toggle"
@@ -1864,6 +3164,57 @@ function Show-WebView2Window {
                     $autostartEl = $doc.GetElementById("autostart")
                     if ($autostartEl) { $autostartEl.SetAttribute("checked", "checked") }
                 }
+                
+                # Load custom mode names for tabs from config
+                $modeIds = @('ai', 'code', 'docs', 'notes', 'chat')
+                foreach ($modeId in $modeIds) {
+                    if ($config.modes.$modeId -and $config.modes.$modeId.name) {
+                        $customName = $config.modes.$modeId.name
+                        $tabEl = $doc.GetElementById("tab-$modeId")
+                        if ($tabEl) {
+                            $tabEl.InnerText = $customName
+                        }
+                    }
+                }
+                
+                # Load default mode dropdown value and update option labels with custom names via JavaScript
+                $defaultMode = if ($config.global.default_mode) { $config.global.default_mode } else { "ai" }
+                
+                # Get custom names with fallbacks
+                $aiName = if ($config.modes.ai.name) { $config.modes.ai.name } else { "AI Chat" }
+                $codeName = if ($config.modes.code.name) { $config.modes.code.name } else { "Code" }
+                $docsName = if ($config.modes.docs.name) { $config.modes.docs.name } else { "Docs" }
+                $notesName = if ($config.modes.notes.name) { $config.modes.notes.name } else { "Notes" }
+                $chatName = if ($config.modes.chat.name) { $config.modes.chat.name } else { "Chat" }
+                
+                if ($logEl) { $logEl.InnerHtml += "Loading default mode: $defaultMode<br>" }
+                
+                # Update dropdown using InvokeScript (more reliable than execScript)
+                $optionsUpdateJs = @"
+setTimeout(function() {
+    var sel = document.getElementById('defaultModeSelect');
+    if (sel) {
+        var names = {'ai': '$($aiName -replace "'", "")','code': '$($codeName -replace "'", "")','docs': '$($docsName -replace "'", "")','notes': '$($notesName -replace "'", "")','chat': '$($chatName -replace "'", "")'};
+        for (var i = 0; i < sel.options.length; i++) {
+            var v = sel.options[i].value;
+            if (names[v]) sel.options[i].text = names[v];
+        }
+        sel.value = '$defaultMode';
+        var idx = ['ai','code','docs','notes','chat'].indexOf('$defaultMode');
+        if (idx >= 0) sel.selectedIndex = idx;
+    }
+}, 100);
+"@
+                try { 
+                    $doc.InvokeScript("eval", @($optionsUpdateJs))
+                    if ($logEl) { $logEl.InnerHtml += "Dropdown updated: $defaultMode<br>" }
+                }
+                catch {
+                    if ($logEl) { $logEl.InnerHtml += "Dropdown update failed: $($_.Exception.Message)<br>" }
+                }
+                
+                # Initial mode selection - load first mode data (use default mode, not always 'ai')
+                $doc.InvokeScript("eval", @("selectMode('$defaultMode');"))
             }
             catch {
                 $logEl = $doc.GetElementById("logArea")
