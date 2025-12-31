@@ -20,7 +20,7 @@
 
 ## 🎯 What is VoiceGrab?
 
-VoiceGrab is a **lightweight Windows utility** that converts your voice to text using Groq's Whisper API. Press a hotkey, speak, and text is automatically typed into any active window — ChatGPT, VS Code, Word, Slack, anywhere!
+VoiceGrab is a **lightweight Windows utility** that converts your voice to text using cloud APIs. Press a hotkey, speak, and text is automatically typed into any active window — ChatGPT, VS Code, Word, Slack, anywhere!
 
 ### Why VoiceGrab?
 
@@ -29,30 +29,37 @@ VoiceGrab is a **lightweight Windows utility** that converts your voice to text 
 | Typing is slow | **Speak 3x faster** than typing |
 | AI prompts are long | **Voice input** for ChatGPT, Claude, Copilot |
 | Coding with voice | **Dictate comments**, docs, commit messages |
-| Multilingual input | **57 languages** supported |
-| **Gaming chat** | **Voice-to-chat** in CS2, Dota 2, LoL, WoW, Valorant, Overwatch 2 |
-
-> 🎮 **Works with:** #CS2 #CounterStrike #Dota2 #LeagueOfLegends #WoW #Valorant #Overwatch2 #PUBG #Fortnite #Apex #R6Siege #Minecraft #Roblox #GTA5 #WoT #Lineage2
+| Multilingual | **57 languages** + auto-translation |
+| **Gaming chat** | **Voice-to-chat** in CS2, Dota 2, LoL, WoW |
 
 ---
 
 ## ✨ Features
 
-- 🎤 **One-Click Recording** — Press `Right Ctrl` to record
-- ♾️ **Unlimited Recording** — Auto-segments every 3 min, no interruption!
-- ⚡ **Dual API Support** — Groq Whisper (fast) + Gemini (AI analysis)
-- 📁 **Batch Transcription** — Transcribe any audio file (MP3, WAV, OGG, etc.)
-- 📋 **Auto-Paste** — Text goes directly to active window
-- 🔄 **5 Modes** — AI Chat, Code, Docs, Notes, Custom
-- 🛡️ **Profanity Filter** — Optional censorship per mode
+### Core
+- 🎤 **One-Click Recording** — Press `Right Ctrl` (configurable)
+- ♾️ **Unlimited Recording** — Auto-segments every 3 min, no interruption
+- 📋 **Auto-Paste** — Text goes directly to active window (and clipboard)
+
+### Transcription
+- ⚡ **Groq Whisper API** — Fast, accurate transcription (FREE tier available)
 - 🧹 **Filler Cleanup** — Remove "um", "uh", "like" automatically
-- 👻 **Hallucination Filter** — Remove Whisper "ghost" phrases
-- 🌐 **Auto-Translate** — Translate transcription to any language (Groq/Gemini/DeepL)
+- 👻 **Hallucination Filter** — Remove Whisper AI "ghost" phrases
+
+### Translation (Per Mode)
+- 🌐 **Auto-Translate** — 3 modes: Off / Replace / Append
+- 🔤 **DeepL Integration** — Quality translation with reverse check
+- 🌍 **Groq AI Translate** — Fast AI-powered translation
+
+### Tools
 - 🔤 **Translator Tool** — Standalone translation with reverse quality check
+- 📁 **Batch Transcription** — via [Google Speech-to-Text](https://cloud.google.com/speech-to-text) (external)
 - 📄 **Document Converter** — MD↔DOCX conversion (Pandoc)
+
+### UI
 - 🖥️ **System Tray** — Runs silently in background
-- ⚙️ **Modern UI** — Beautiful dark settings panel, "Halving Style" button layout
-- 💾 **Settings Persistence** — All preferences saved to config.json
+- 💡 **Floating Indicator** — Shows recording status + current mode
+- ⚙️ **Modern Settings** — Dark theme, all settings per mode
 
 ---
 
@@ -70,38 +77,79 @@ cd VoiceGrab
 ### 3. Run
 Double-click **`VoiceGrab.bat`**
 
-- First launch: Enter API key, click **Install Deps**, then **Run**
-- That's it! VoiceGrab is now in your system tray 🎉
+- First launch: Enter API key → click **Install Deps** → **Run**
+- VoiceGrab appears in system tray 🎉
 
 ### 4. Use
 | Action | How |
 |--------|-----|
 | **Start/Stop Recording** | Press `Right Ctrl` |
-| **Switch Mode (while recording)** | Click `◀ Mode ▶` on indicator |
+| **Switch Mode** | Click `◀ Mode ▶` on floating indicator |
 | **Open Settings** | Right-click tray → Settings |
 | **Exit** | Right-click tray → Exit |
 
-### 🔄 Mode Priority Logic
+### Mode Priority (Simple)
+
+1. **Start Recording** → uses mode from Settings UI
+2. **Click mode on Indicator** → switches mode for THIS session only
+3. **Next Recording** → reads mode from Settings again
+
+> 💡 **Tip:** Text is always in clipboard! **Ctrl+V** to paste.
+
+---
+
+## ⚙️ Settings
+
+### Configuration Architecture
 
 ```
-┌─────────────────┐   Read at start   ┌─────────────────┐
-│  Settings Tab   │ ───────────────▶  │    Recording    │
-│  (config.json)  │   Source of Truth │  (Floating UI)  │
-└─────────────────┘                   └─────────────────┘
-                                            │ Click
-                                            ▼ (temporary)
-                                    ┌─────────────────┐
-                                    │ Session Override│
-                                    │ (memory only)   │
-                                    └─────────────────┘
+┌─────────────────────┐      ┌─────────────────────┐
+│  config_default.json │  →  │     config.json      │
+│  (factory defaults)  │      │   (your settings)    │
+└─────────────────────┘      └─────────────────────┘
 ```
 
-- **Settings Tab** = source of truth for NEW recordings
-- **Floating Indicator** = temporary override for CURRENT session
-- **Next recording** will read from Settings again
+- **First launch**: defaults are copied to your config.json
+- **Reset Mode**: restores that mode from defaults
+- **All changes**: saved to config.json automatically
 
-> 💡 **Tip:** Text is always in clipboard! **Ctrl+V** to paste.  
-> **Win+V** opens emoji picker, clipboard history & special symbols.
+### Global Settings
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| **Hotkey** | Right Ctrl | Global recording trigger |
+| **Max Duration** | 180s | Auto-sends at limit |
+| **Save Audio** | OFF | Keep audio files in `recordings/` |
+| **Default Mode** | Selectable | Mode used at startup |
+
+### Per-Mode Settings (5 Modes)
+
+**Each mode is fully customizable:**
+
+| Setting | Options | Description |
+|---------|---------|-------------|
+| **Mode Name** | Custom text | Rename tab (e.g., "Ru-TR") |
+| **Language** | 57 languages | Primary speech language |
+| **Temperature** | 0.0 - 1.0 | 0 = precise, 1 = creative |
+| **Input Mode** | Toggle / Hold | Click-click or press-hold |
+| **Transcription Model** | Large-v3 / Turbo / Distil | Speed vs accuracy |
+| **Filler Cleanup** | ON/OFF | Remove "um", "uh", etc. |
+| **Hallucination Filter** | ON/OFF | Remove AI ghost phrases |
+| **Phrases to Remove** | Custom list | Add your own hallucinations |
+| **Prompt** | Custom text | Context hint for Whisper |
+| **Auto-Translate** | Off / Replace / Append | Translation mode |
+| **Translate Language** | EN, RU, TR, etc. | Target language |
+| **Translate Engine** | Groq / DeepL | Translation service |
+
+### Default Modes
+
+| Mode | Name | Use Case |
+|------|------|----------|
+| 🤖 **ai** | AI Chat | ChatGPT prompts, coding |
+| 💻 **code** | Code | Programming, technical |
+| 📋 **docs** | Docs | Documentation |
+| 📝 **notes** | Notes | Quick notes, ideas |
+| 💬 **chat** | Chat | Casual conversation |
 
 ---
 
@@ -113,108 +161,58 @@ Double-click **`VoiceGrab.bat`**
   > ⚠️ Check **"Add Python to PATH"** during installation!
 - **Microphone**
 
-### Manual Installation
-```powershell
-# Clone repository
-git clone https://github.com/YourUsername/VoiceGrab.git
-cd VoiceGrab
+### Portable Installation (10 files)
 
-# Install dependencies
-pip install -r requirements.txt
-
-# Run
-python voicegrab.py
+Copy these files to any folder:
 ```
-
-### Portable Installation
-Just copy these 7 files to any folder:
-```
-VoiceGrab.bat
-VoiceGrab.ps1
-voicegrab.py
-floating_indicator.py
-system_tray.py
-config_schema.py
-requirements.txt
+VoiceGrab.bat           # 🚀 Entry point
+VoiceGrab.ps1           # Settings UI
+voicegrab.py            # Main service
+floating_indicator.py   # Recording indicator
+system_tray.py          # Tray icon
+config_schema.py        # Config loader
+config_default.json     # Factory defaults
+config.json             # Your settings (auto-created)
+requirements.txt        # Dependencies
+recordings/             # Audio (if enabled)
 ```
 
 ---
 
-## ⚙️ Settings
+## 📋 Changelog
 
-### Global Settings
-| Setting | Default | Description |
-|---------|---------|-------------|
-| **Hotkey** | Right Ctrl | Global recording key |
-| **Max Duration** | 180s | Auto-sends at limit (no need to stop!) |
-| **Save Audio** | OFF | Keep audio files |
-| **Log Texts** | ON | Save all transcriptions to log file |
+### v2.3.0 (2025-12-31)
+- 🔧 **Settings Fix** — All textarea fields (Prompt, Phrases to Remove, Filler Words) now save correctly
+- 🔄 **Mode Sync Fix** — Settings → Indicator → Processing chain works correctly
+- 📝 **Single Default Config** — `config_default.json` is the only source of defaults
+- 🔄 **Dropdown Sync** — Startup Mode dropdown updates when mode is renamed
+- 🧹 **Auto-Cache Cleanup** — EXIT button clears `__pycache__`
 
-### Per-Mode Settings
-Each mode has independent settings:
+### v2.0.0 - v2.2.0 (2025-12)
+- 🏷️ **Custom Mode Names** — Rename tabs
+- 💡 **Tab Tooltips** — Hover to see mode config
+- ⚙️ **Mode Priority System** — Settings = source of truth
+- 🎨 **"Halving Style" UI** — Modern button layout
 
-| Setting | Description |
-|---------|-------------|
-| **Input Mode** | Toggle (click-click) or Hold (press & hold) |
-| **Language** | 57 languages supported (English default) |
-| **Temperature** | 0.0 = precise, 1.0 = creative |
-| **Profanity Filter** | Replace bad words with *** |
-| **Filler Cleanup** | Remove "um", "uh", "like", etc. |
-| **Hallucination Filter** | Remove AI "ghost" phrases (customizable list) |
-| **Transcription Provider** | Groq (Whisper) or Gemini per mode |
-| **Transcription Model** | whisper-large-v3, distil-v3-en, turbo |
-| **Auto-Translate** | Off / Replace / Append |
-| **Translate Language** | Target language for auto-translate |
-| **Translate Engine** | Groq AI / Gemini / DeepL |
-| **Prompt** | Context hint for Whisper |
+### v1.5.0 (2025-12)
+- 🌐 **Auto-Translate** — Per-mode translation (Groq/DeepL)
+- 🔤 **Translator Tool** — Standalone translation with reverse check
+- 📋 **Copy All / Clear All** — Translator bulk operations
 
-### 5 Modes
-| Mode | Use Case | Profanity | Filler Cleanup |
-|------|----------|-----------|----------------|
-| 🤖 **AI Chat** | ChatGPT prompts | OFF | ON |
-| 💻 **Code** | Programming | ON | ON |
-| 📋 **Docs** | Documentation | ON | ON |
-| 📝 **Notes** | Quick notes | OFF | ON |
-| 💬 **Chat** | Free conversation | OFF | OFF |
+### v1.4.0 (2024-12)
+- 📁 **Batch Transcription** — `batch_transcribe.py`
+- 📄 **Document Converter** — MD↔DOCX
 
-### Mode Tab Tooltips
-Hover over mode tabs to see settings summary:
-
-| Tooltip | Meaning |
-|---------|---------|
-| `RU @Groq` | Russian, Groq transcription, no translate |
-| `EN @Gemini` | English, Gemini transcription, no translate |
-| `RU @Groq \| ON→EN @DeepL` | Russian, Groq transc., translate ON to English via DeepL |
-| `RU @Gemini \| Append→EN @Groq` | Russian, Gemini, Append translation to English via Groq |
-
----
-
-## 🔧 Configuration
-
-All settings are stored in `config.json`:
-
-```json
-{
-  "api": { "key": "gsk_..." },
-  "global": {
-    "hotkey": "Right Ctrl",
-    "max_duration": 180,
-    "save_audio": false,
-    "log_texts": true
-  },
-  "modes": {
-    "ai": { "language": "auto", "temperature": 0.0, ... },
-    "code": { "profanity_filter": true, ... }
-  }
-}
-```
+### v1.3.0 (2024-12)
+- 🌍 **57 Languages** — Expanded language support
+- 🐛 **Bug Fixes** — Settings persistence, audio saving
 
 ---
 
 ## ❓ FAQ
 
 <details>
-<summary><b>Q: Is it really free?</b></summary>
+<summary><b>Is it really free?</b></summary>
 
 Yes! Groq offers a generous FREE tier:
 - ~10 requests per minute
@@ -224,61 +222,20 @@ Yes! Groq offers a generous FREE tier:
 </details>
 
 <details>
-<summary><b>Q: Which languages are supported?</b></summary>
+<summary><b>Which languages are supported?</b></summary>
 
-Whisper supports 50+ languages including:
-- English, Russian, Ukrainian, Turkish
-- Spanish, French, German, Chinese, Japanese
-- Auto-detection works great for most languages
-
-</details>
-
-<details>
-<summary><b>Q: Why Right Ctrl and not another key?</b></summary>
-
-Right Ctrl (AltGr) is ideal because:
-- Rarely used in applications
-- Easy to reach with thumb
-- Works globally in any window
-
-You can change it in Settings!
+Whisper supports 57 languages including:
+Russian, English, Ukrainian, Turkish, Spanish, French, German, Chinese, Japanese.
+Auto-detection works great for most languages.
 
 </details>
 
 <details>
-<summary><b>Q: Does it work offline?</b></summary>
+<summary><b>Does it work offline?</b></summary>
 
-No, VoiceGrab requires internet connection to send audio to Groq API. Audio is processed in cloud and deleted immediately after transcription.
-
-</details>
-
-<details>
-<summary><b>Q: Can I use it for coding?</b></summary>
-
-Absolutely! Use **Code** mode:
-- Profanity filter ON (clean code comments)
-- Filler cleanup ON (no "um" in your code)
-- Low temperature (0.0) for precise terms
+No, VoiceGrab requires internet to send audio to APIs. Audio is processed in cloud and deleted immediately.
 
 </details>
-
----
-
-## 🗂️ File Structure
-
-```
-VoiceGrab/
-├── VoiceGrab.bat           # 🚀 Entry point (double-click me!)
-├── VoiceGrab.ps1           # Settings UI
-├── voicegrab.py            # Main service
-├── floating_indicator.py   # Recording indicator
-├── system_tray.py          # Tray icon
-├── config_schema.py        # Default config
-├── config.json             # Your settings (auto-created)
-├── requirements.txt        # Python dependencies
-├── recordings/             # Audio files (if enabled)
-└── Doc/                    # Documentation
-```
 
 ---
 
@@ -289,34 +246,8 @@ VoiceGrab/
 | Python not found | Reinstall Python, check "Add to PATH" |
 | No microphone | Check Windows sound settings |
 | Hotkey not working | Make sure VoiceGrab is in tray |
-| Rate limit exceeded | Wait 1 minute, or switch Whisper model |
+| Rate limit exceeded | Wait 1 minute, or use different model |
 | Text not pasting | Focus target window before recording |
-
----
-
-## 📋 Changelog
-
-### v1.5.0 (2025-12-29)
-- 🌐 **Auto-Translate** — Per-mode translation with Groq AI, Gemini, or DeepL
-- 🔤 **Translator Tool** — Standalone translation with reverse quality check
-- 📋 **Copy All / Clear All** — Translator buttons for bulk operations
-- 🏷️ **Custom Mode Names** — Rename tabs with custom short names
-- 💡 **Tab Tooltips** — Hover to see mode config (e.g., `RU @Groq | Append→EN @DeepL`)
-- 🔧 **Tools Settings Persistence** — Translator language/engine saved
-- 💡 **Ctrl+V Tip** — Reminder that text is always in clipboard
-
-### v1.4.0 (2024-12-22)
-- 🤖 **Gemini API Support** — AI-powered analysis with speakers, emotions, timestamps
-- 📁 **Batch Transcription** — `batch_transcribe.py` for transcribing audio files
-- 📄 **Document Converter** — MD↔DOCX conversion with Pandoc (in Tools)
-- 🔧 **Dual Provider** — Use Groq (fast) or Gemini (smart) per task
-
-### v1.3.0 (2024-12-15)
-- 🌍 **Language Support Expanded** — 57 languages with improved detection
-- 🔧 **Bug Fixes:**
-  - Fixed settings not persisting (Max Duration, Filler Words, etc.)
-  - Fixed audio files not saving to `recordings/` folder
-  - Fixed UTF-8 BOM encoding issues in config
 
 ---
 
@@ -324,38 +255,8 @@ VoiceGrab/
 
 | Phase | Feature | Status |
 |-------|---------|--------|
-| 2 | **WebView2 UI** — Modern scroll, ES6+ | 📋 Planned |
-| 3 | **TTS (Text-to-Speech)** — Voice output | 📋 Planned |
-| 4 | **Screen OCR** — Read text from screen | 📋 Planned |
-| 5 | **Realtime Translation** — Live dialog/screen translate | 📋 Planned |
 | 6 | **Packaging** — Single .exe installer | 📋 Planned |
-| ? | **Story Mode** — Pause recording, single WAV file (optional) | 💡 Idea |
-
-> **Note (v2.3):**
-> - **Mode Sync Fix** — Settings → Indicator → Processing chain works correctly
-> - **Mode Priority** — Settings = source of truth; Indicator = session override only
-> - **Dropdown Sync** — Startup Mode dropdown updates when mode is renamed
-> - **Single Default Config** — `config_default.json` is the only source of defaults
-> - **Auto-Cache Cleanup** — EXIT button clears `__pycache__` for fresh code
-> - **Halving Style UI** — Button layout: Run+Settings → Run+Tray → Transcribe → EXIT
-
----
-
-## 📁 Project Structure (10 core files)
-
-```
-VoiceGrab/
-├── VoiceGrab.bat           # 🚀 Entry point (double-click me!)
-├── VoiceGrab.ps1           # Settings UI (PowerShell + HTA)
-├── voicegrab.py            # Main service
-├── floating_indicator.py   # Recording indicator
-├── system_tray.py          # Tray icon
-├── config_schema.py        # Config loader
-├── config_default.json     # Default settings (single source of truth) ← NEW
-├── config.json             # Your settings (auto-created)
-├── requirements.txt        # Python dependencies
-└── recordings/             # Audio files (if enabled)
-```
+| 7 | **Quick Actions** — Translate selected text | 📋 Planned |
 
 ---
 
@@ -365,26 +266,8 @@ MIT License — free for personal and commercial use.
 
 ---
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing`)
-5. Open Pull Request
-
----
-
-## ⭐ Star History
-
-If VoiceGrab helps you, give it a ⭐ on GitHub!
-
----
-
 <div align="center">
 
 **Made with ❤️ for the AI era**
-
-[Report Bug](https://github.com/YourUsername/VoiceGrab/issues) • [Request Feature](https://github.com/YourUsername/VoiceGrab/issues)
 
 </div>
