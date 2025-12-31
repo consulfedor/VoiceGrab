@@ -1282,7 +1282,7 @@ function selectMode(mode) {
         if (dataEl && dataEl.value) {
             try {
                 var data = JSON.parse(dataEl.value);
-                log('DEBUG modeDataJson: ' + dataEl.value);
+                // log('DEBUG modeDataJson: ' + dataEl.value); // Disabled in v2.3.1
                 document.getElementById('modeProfanity').checked = data.profanity_filter === true || data.profanity_filter === 'true';
                 document.getElementById('modeFillerCleanup').checked = data.filler_cleanup === true || data.filler_cleanup === 'true';
                 // Hallucination filter (default true if missing)
@@ -1347,7 +1347,7 @@ function selectMode(mode) {
                 updateModeTabTitle(mode, data);
             } catch(e) { log('DEBUG parse error: ' + e); }
         } else {
-            log('DEBUG modeDataJson NOT FOUND or empty');
+            // log('DEBUG modeDataJson NOT FOUND or empty'); // Disabled in v2.3.1
         }
     }, 500);
     log('Mode selected: ' + mode);
@@ -2736,8 +2736,9 @@ function Show-WebView2Window {
                                 if ($config.modes.$m.profanity_filter -eq $true) { $profanity = "true" }
                                 if ($config.modes.$m.filler_cleanup -eq $true) { $filler = "true" }
                             }
-                            $jsCode += "document.getElementById('profanity_$m').checked = $profanity; "
-                            $jsCode += "document.getElementById('filler_$m').checked = $filler; "
+                            # Add null checks to prevent "Cannot call method for NULL" error
+                            $jsCode += "var p=document.getElementById('profanity_$m'); if(p) p.checked=$profanity; "
+                            $jsCode += "var f=document.getElementById('filler_$m'); if(f) f.checked=$filler; "
                         }
                         try { $doc.parentWindow.eval($jsCode) } catch {}
                         if ($logEl) { $logEl.InnerHtml += "Loaded all mode checkboxes<br>" }
@@ -2864,19 +2865,25 @@ function Show-WebView2Window {
                                 if ($inputToggleEl) { $inputToggleEl.SetAttribute("checked", "checked") }
                                 if ($inputHoldEl) { $inputHoldEl.RemoveAttribute("checked") }
                             }
-                            # DIRECT JavaScript eval to set checkboxes (most reliable method)
+                            # DIRECT JavaScript eval to set checkboxes - using setTimeout to ensure DOM is ready
                             $profVal = if ($modeData.profanity_filter -eq $true) { "true" } else { "false" }
                             $fillerVal = if ($modeData.filler_cleanup -eq $true) { "true" } else { "false" }
                             $hallucVal = if ($modeData.hallucination_filter -eq $false) { "false" } else { "true" }
-                            $jsCode = "document.getElementById('modeProfanity').checked = $profVal; "
-                            $jsCode += "document.getElementById('modeFillerCleanup').checked = $fillerVal; "
-                            $jsCode += "document.getElementById('modeHallucinationFilter').checked = $hallucVal;"
-                            if ($logEl) { $logEl.InnerHtml += "DEBUG: Setting checkboxes: profanity=$profVal, filler=$fillerVal, halluc=$hallucVal<br>" }
-                            try { 
-                                $doc.parentWindow.eval($jsCode) 
-                            }
-                            catch {
-                                if ($logEl) { $logEl.InnerHtml += "DEBUG eval error: $_<br>" }
+                            # Use setTimeout with internal try-catch to handle async errors
+                            $jsCode = "setTimeout(function() { try { "
+                            $jsCode += "var p=document.getElementById('modeProfanity'); if(p) p.checked=$profVal; "
+                            $jsCode += "var f=document.getElementById('modeFillerCleanup'); if(f) f.checked=$fillerVal; "
+                            $jsCode += "var h=document.getElementById('modeHallucinationFilter'); if(h) h.checked=$hallucVal; "
+                            $jsCode += "} catch(e) {} }, 50);"
+                            # Checkbox setting is now silent (debug logging removed in v2.3.1)
+                            # Check if parentWindow exists before calling eval
+                            if ($doc.parentWindow) {
+                                try { 
+                                    $doc.parentWindow.eval($jsCode) 
+                                }
+                                catch {
+                                    if ($logEl) { $logEl.InnerHtml += "DEBUG eval error: $_<br>" }
+                                }
                             }
                         }
                         if ($logEl) { $logEl.InnerHtml += "Mode loaded: $modeName<br>" }

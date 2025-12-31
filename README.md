@@ -5,7 +5,7 @@
 [![Windows](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078D6?logo=windows)](https://www.microsoft.com/windows)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://www.python.org)
 [![Groq](https://img.shields.io/badge/API-Groq%20Whisper-FF6B6B?logo=openai)](https://console.groq.com)
-[![Version](https://img.shields.io/badge/Version-2.3.0-blueviolet)](https://github.com/YourUsername/VoiceGrab)
+[![Version](https://img.shields.io/badge/Version-2.3.1-blueviolet)](https://github.com/YourUsername/VoiceGrab)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 **Voice-to-Text Bridge for AI & Any Application**
@@ -181,12 +181,13 @@ recordings/             # Audio (if enabled)
 
 ## 📋 Changelog
 
+### v2.3.1 (2025-12-31)
+- 🛠️ **NULL Eval Fix** — Fixed parentWindow.eval NULL error at startup
+- 🧹 **Debug Logging Off** — Removed verbose DEBUG output from console
+
 ### v2.3.0 (2025-12-31)
-- 🔧 **Settings Fix** — All textarea fields (Prompt, Phrases to Remove, Filler Words) now save correctly
-- 🔄 **Mode Sync Fix** — Settings → Indicator → Processing chain works correctly
+- 🔧 **Settings Fix** — Prompt, Phrases to Remove now save correctly
 - 📝 **Single Default Config** — `config_default.json` is the only source of defaults
-- 🔄 **Dropdown Sync** — Startup Mode dropdown updates when mode is renamed
-- 🧹 **Auto-Cache Cleanup** — EXIT button clears `__pycache__`
 
 ### v2.0.0 - v2.2.0 (2025-12)
 - 🏷️ **Custom Mode Names** — Rename tabs
