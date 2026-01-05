@@ -43,7 +43,7 @@ VoiceGrab is a **free, open-source alternative** to Dragon NaturallySpeaking ($3
 
 **Voice-to-Text with Real-time Translation in action:**
 
-[![VoiceGrab Demo](assets/demo_thumb.png)](assets/demo.mp4)
+<video src="https://github.com/consulfedor/VoiceGrab/raw/main/assets/demo.mp4" controls width="100%"></video>
 
 *(15 sec: Dictating in Russian → Auto-translates to English → Pastes into MS Word)*
 
