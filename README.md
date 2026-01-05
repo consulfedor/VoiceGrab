@@ -5,7 +5,7 @@
 [![Windows](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078D6?logo=windows)](https://www.microsoft.com/windows)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://www.python.org)
 [![Groq](https://img.shields.io/badge/API-Groq%20Whisper-FF6B6B?logo=openai)](https://console.groq.com)
-[![Version](https://img.shields.io/badge/Version-2.3.1-blueviolet)](https://github.com/YourUsername/VoiceGrab)
+[![Version](https://img.shields.io/badge/Version-2.3.2-blueviolet)](https://github.com/YourUsername/VoiceGrab)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 **Voice-to-Text Bridge for AI & Any Application**
@@ -180,6 +180,10 @@ recordings/             # Audio (if enabled)
 ---
 
 ## 📋 Changelog
+
+### v2.3.2 (2026-01-06)
+- 🛡️ **Config Protection** — Prevents saving empty/NULL config (fixes data loss bug)
+- 🔄 **Auto-Restore** — Empty config.json auto-restores from defaults
 
 ### v2.3.1 (2025-12-31)
 - 🛠️ **NULL Eval Fix** — Fixed parentWindow.eval NULL error at startup

@@ -66,9 +66,20 @@ class Config:
         """Save config to file"""
         if config:
             self._config = config
+        
+        # CRITICAL: Validate config before saving to prevent data loss
+        if not self._config:
+            print(f"[CONFIG ERROR] Attempted to save NULL config - REFUSED!")
+            return False
+        
+        json_str = json.dumps(self._config, ensure_ascii=False, indent=2)
+        if len(json_str) < 50:
+            print(f"[CONFIG ERROR] Config too small ({len(json_str)} chars) - REFUSED!")
+            return False
+        
         try:
             with open(self.path, 'w', encoding='utf-8') as f:
-                json.dump(self._config, f, ensure_ascii=False, indent=2)
+                f.write(json_str)
             return True
         except Exception as e:
             print(f"Error saving config: {e}")

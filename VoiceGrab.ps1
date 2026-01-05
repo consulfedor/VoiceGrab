@@ -1780,23 +1780,53 @@ function Get-DefaultConfig {
 function Get-Config {
     $defaults = Get-DefaultConfig
     if (Test-Path $script:ConfigPath) {
-        $saved = Get-Content $script:ConfigPath -Raw | ConvertFrom-Json
-        # Merge with defaults
-        if (-not $saved.global) { $saved | Add-Member -NotePropertyName "global" -NotePropertyValue $defaults.global -Force }
-        if (-not $saved.input) { $saved | Add-Member -NotePropertyName "input" -NotePropertyValue $defaults.input -Force }
-        if (-not $saved.api) { $saved | Add-Member -NotePropertyName "api" -NotePropertyValue $defaults.api -Force }
-        return $saved
+        $content = Get-Content $script:ConfigPath -Raw -ErrorAction SilentlyContinue
+        # CRITICAL: If config.json is empty or corrupt, restore from defaults
+        if (-not $content -or $content.Length -lt 50) {
+            "$(Get-Date) - WARNING: config.json is empty/corrupt ($($content.Length) chars), restoring from defaults!" | Out-File "$PSScriptRoot\save_debug.log" -Append
+            # Copy defaults to config.json
+            $defaults | ConvertTo-Json -Depth 10 | Set-Content $script:ConfigPath -Encoding UTF8
+            return $defaults
+        }
+        try {
+            $saved = $content | ConvertFrom-Json
+            if (-not $saved) {
+                "$(Get-Date) - WARNING: config.json parsed as NULL, restoring from defaults!" | Out-File "$PSScriptRoot\save_debug.log" -Append
+                $defaults | ConvertTo-Json -Depth 10 | Set-Content $script:ConfigPath -Encoding UTF8
+                return $defaults
+            }
+            # Merge with defaults
+            if (-not $saved.global) { $saved | Add-Member -NotePropertyName "global" -NotePropertyValue $defaults.global -Force }
+            if (-not $saved.input) { $saved | Add-Member -NotePropertyName "input" -NotePropertyValue $defaults.input -Force }
+            if (-not $saved.api) { $saved | Add-Member -NotePropertyName "api" -NotePropertyValue $defaults.api -Force }
+            return $saved
+        }
+        catch {
+            "$(Get-Date) - ERROR parsing config.json: $_, restoring from defaults!" | Out-File "$PSScriptRoot\save_debug.log" -Append
+            $defaults | ConvertTo-Json -Depth 10 | Set-Content $script:ConfigPath -Encoding UTF8
+            return $defaults
+        }
     }
     return $defaults
 }
 
 function Save-Config($config) {
     try {
+        # CRITICAL: Validate config before saving to prevent data loss
+        if (-not $config) {
+            "$(Get-Date) - ERROR: Attempted to save NULL config!" | Out-File "$PSScriptRoot\save_debug.log" -Append
+            return
+        }
+        $json = $config | ConvertTo-Json -Depth 10
+        if (-not $json -or $json.Length -lt 50) {
+            "$(Get-Date) - ERROR: Config too small ($($json.Length) chars), refusing to save!" | Out-File "$PSScriptRoot\save_debug.log" -Append
+            return
+        }
         $path = $script:ConfigPath
         if (-not $path) { $path = Join-Path $PSScriptRoot "config.json" }
-        $config | ConvertTo-Json -Depth 10 | Set-Content $path -Encoding UTF8
+        $json | Set-Content $path -Encoding UTF8
         # Debug: write to file
-        "$(Get-Date) - Saved to: $path" | Out-File "$PSScriptRoot\save_debug.log" -Append
+        "$(Get-Date) - Saved to: $path ($($json.Length) chars)" | Out-File "$PSScriptRoot\save_debug.log" -Append
     }
     catch {
         "$(Get-Date) - ERROR: $_" | Out-File "$PSScriptRoot\save_debug.log" -Append
