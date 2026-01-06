@@ -6,7 +6,8 @@
 
 [![Windows](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078D6?logo=windows)](https://www.microsoft.com/windows)
 [![Groq](https://img.shields.io/badge/API-Groq%20Whisper-FF6B6B?logo=openai)](https://console.groq.com)
-[![Telegram](https://img.shields.io/badge/Telegram-Join%20Channel-blue?logo=telegram)](https://t.me/voicegrab_dev)
+[![Telegram](https://img.shields.io/badge/Telegram-Channel-blue?logo=telegram)](https://t.me/voicegrab_dev)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0A66C2?logo=linkedin)](https://www.linkedin.com/in/nickolayklykov/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 **Free Voice-to-Text for Windows — No Subscription Required**
@@ -43,9 +44,9 @@ VoiceGrab is a **free, open-source alternative** to Dragon NaturallySpeaking ($3
 
 **Voice-to-Text with Real-time Translation in action:**
 
-<video src="https://github.com/consulfedor/VoiceGrab/raw/main/assets/demo.mp4" controls width="100%"></video>
+[![VoiceGrab Demo](assets/demo_thumb.png)](https://github.com/consulfedor/VoiceGrab/raw/main/assets/demo.mp4)
 
-*(15 sec: Dictating in Russian → Auto-translates to English → Pastes into MS Word)*
+👆 *Click thumbnail to download video (15 sec MP4)*
 
 ---
 
